@@ -24,87 +24,87 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      console.log(data)
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
-      const userRole = data.role?.toLowerCase() || "nurse"; // Normalize casing if needed
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: formData.email,
-          token: data.token,
-          role: "superAdmin",
-          isAuthenticated: true,
-        })
-      );
-
-      toast.success(`Welcome! Logged in as ${userRole}`);
-      navigate("/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Something went wrong");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
   // const handleSubmit = async (e: React.FormEvent) => {
   //   e.preventDefault();
   //   setIsLoading(true);
   //
-  //   // Simulate authentication API call
-  //   await new Promise((resolve) => setTimeout(resolve, 1000));
+  //   try {
+  //     const response = await fetch(
+  //       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/login",
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({
+  //           email: formData.email,
+  //           password: formData.password,
+  //         }),
+  //       }
+  //     );
   //
-  //   // Simulate backend API response with user role based on email
-  //   // In real app, this would come from your authentication API
-  //   let userRole: UserRole = "nurse"; // default role
+  //     const data = await response.json();
+  //     console.log(data)
+  //     if (!response.ok) {
+  //       throw new Error(data.message || "Login failed");
+  //     }
   //
-  //   if (
-  //     formData.email.includes("superadmin") ||
-  //     formData.email.includes("super")
-  //   ) {
-  //     userRole = "superAdmin";
-  //   } else if (formData.email.includes("admin")) {
-  //     userRole = "admin";
+  //     const userRole = data.role?.toLowerCase() || "nurse"; // Normalize casing if needed
+  //
+  //     localStorage.setItem(
+  //       "user",
+  //       JSON.stringify({
+  //         email: formData.email,
+  //         token: data.token,
+  //         role: "superAdmin",
+  //         isAuthenticated: true,
+  //       })
+  //     );
+  //
+  //     toast.success(`Welcome! Logged in as ${userRole}`);
+  //     navigate("/dashboard");
+  //   } catch (error: any) {
+  //     toast.error(error.message || "Something went wrong");
+  //   } finally {
+  //     setIsLoading(false);
   //   }
-  //
-  //   // Store user data in localStorage (in real app, use proper auth)
-  //   localStorage.setItem(
-  //     "user",
-  //     JSON.stringify({
-  //       email: formData.email,
-  //       role: "superAdmin",
-  //       isAuthenticated: true,
-  //     }),
-  //   );
-  //
-  //   toast.success(`Welcome! Logged in as ${userRole}`);
-  //   navigate("/dashboard");
-  //   setIsLoading(false);
   // };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate authentication API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Simulate backend API response with user role based on email
+    // In real app, this would come from your authentication API
+    let userRole: UserRole = "nurse"; // default role
+
+    if (
+      formData.email.includes("superadmin") ||
+      formData.email.includes("super")
+    ) {
+      userRole = "superAdmin";
+    } else if (formData.email.includes("admin")) {
+      userRole = "admin";
+    }
+
+    // Store user data in localStorage (in real app, use proper auth)
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        email: formData.email,
+        role: "superAdmin",
+        isAuthenticated: true,
+      }),
+    );
+
+    toast.success(`Welcome! Logged in as ${userRole}`);
+    navigate("/dashboard");
+    setIsLoading(false);
+  };
 
   const handleInputChange = (
     field: keyof LoginFormData,
