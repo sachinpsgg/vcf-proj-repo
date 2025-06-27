@@ -45,8 +45,7 @@ const CampaignDetailSection = ({
 }: CampaignDetailSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-
-  // Mock campaign data - in real app this would be fetched by ID
+  console.log(campaignId)
   const campaign: Campaign = {
     id: campaignId,
     name:
@@ -297,13 +296,13 @@ const CampaignDetailSection = ({
       </Card>
 
       {/* Campaign Form Modal */}
-    {/*  <CampaignFormModal*/}
-    {/*    isOpen={isModalOpen}*/}
-    {/*    onClose={() => setIsModalOpen(false)}*/}
-    {/*    onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}*/}
-    {/*    initialData={isEditing ? campaign : null}*/}
-    {/*    isEditing={isEditing}*/}
-    {/*  />*/}
+      <CampaignFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}
+        initialData={isEditing ? campaign : null}
+        isEditing={isEditing}
+      />
     </div>
   );
 };

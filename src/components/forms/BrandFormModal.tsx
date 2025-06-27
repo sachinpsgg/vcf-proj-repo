@@ -125,12 +125,13 @@ const BrandFormModal = ({
         toast.success("Brand created successfully");
       }
 
-      onClose();
+
     } catch (error: any) {
       console.error("Error submitting brand:", error);
       toast.error("An error occurred");
     }
-    onSubmit(formData);
+    // onClose();
+    // onSubmit(formData);
   };
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {

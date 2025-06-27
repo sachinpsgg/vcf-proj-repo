@@ -389,7 +389,13 @@ import { X, Upload, UserPlus, Plus } from "lucide-react";
 import NurseCreateModal from "@/components/forms/NurseCreateModal";
 import { toast } from "sonner";
 
-interface Nurse { id: string; name: string; email: string; }
+interface Nurse {
+  user_id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
 interface Brand { id: number; name: string; }
 interface CampaignPayload {
   name: string;
@@ -432,11 +438,12 @@ const CampaignFormModal = ({
       .then(res => res.json())
       .then(data => setBrands(data.brands || []));
     console.log(brands)
-    // fetch("https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-nurses", {
-    //   headers: { Authorization: `Bearer ${token}` }
-    // })
-    //   .then(res => res.json())
-    //   .then(data => setNurses(data.nurses || []));
+    fetch("https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/getAll", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setNurses(data.nurses || []));
+    console.log(nurses)
   }, [isOpen]);
 
   useEffect(() => {
@@ -450,7 +457,7 @@ const CampaignFormModal = ({
     }
     setIsNurseModalOpen(false);
   }, [initialData, isOpen]);
-
+  console.log(nurses)
   const handleAddNurse = () => {
     const id = parseInt(selectedNurse, 10);
     if (id && !form.nurse_ids.includes(id)) {
@@ -509,7 +516,9 @@ const CampaignFormModal = ({
     }
   };
 
-  const availableNurses = nurses.filter(n => !form.nurse_ids.includes(parseInt(n.id, 10)));
+  const availableNurses = nurses.filter(
+    n => !form.nurse_ids.includes(n.user_id)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -559,8 +568,10 @@ const CampaignFormModal = ({
               <Select value={selectedNurse} onValueChange={setSelectedNurse}>
                 <SelectTrigger className="flex-1"><SelectValue placeholder="Select a nurse" /></SelectTrigger>
                 <SelectContent>
-                  {availableNurses.map(n => (
-                    <SelectItem key={n.id} value={n.id}>{n.name} ({n.email})</SelectItem>
+                  {nurses.map(n => (
+                    <SelectItem key={n.user_id} value={String(n.user_id)}>
+                      {n.first_name} {n.last_name} ({n.email})
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -573,11 +584,11 @@ const CampaignFormModal = ({
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
               {form.nurse_ids.map(id => {
-                const nurse = nurses.find(n => parseInt(n.id, 10) === id);
+                const nurse = nurses.find(n => n.user_id === id);
                 if (!nurse) return null;
                 return (
                   <Badge key={id} variant="outline" className="gap-1">
-                    {nurse.name}
+                    {nurse.first_name} {nurse.last_name}
                     <button onClick={() => handleRemoveNurse(id)} className="hover:bg-destructive/20 p-0.5 rounded-full">
                       <X className="w-3 h-3" />
                     </button>

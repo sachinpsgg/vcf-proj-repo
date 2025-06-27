@@ -387,17 +387,17 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
       </Card>
 
       {/* Campaign Form Modal */}
-      {/*<CampaignFormModal*/}
-      {/*  isOpen={isModalOpen}*/}
-      {/*  onClose={closeModal}*/}
-      {/*  onSubmit={*/}
-      {/*    editingCampaign*/}
-      {/*      ? (data) => handleEditCampaign(editingCampaign.id, data)*/}
-      {/*      : handleCreateCampaign*/}
-      {/*  }*/}
-      {/*  initialData={editingCampaign}*/}
-      {/*  isEditing={!!editingCampaign}*/}
-      {/*/>*/}
+      <CampaignFormModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onSubmit={
+          editingCampaign
+            ? (data) => handleEditCampaign(editingCampaign.id, data)
+            : handleCreateCampaign
+        }
+        initialData={editingCampaign}
+        isEditing={!!editingCampaign}
+      />
     </div>
   );
 };
