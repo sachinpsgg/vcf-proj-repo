@@ -129,6 +129,14 @@ const AdminAssignmentModal = ({
     }
   }, [isOpen, currentAdmins]);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedAdminIds([]);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
   const handleAdminToggle = (adminId: number) => {
     setSelectedAdminIds((prev) => {
       if (prev.includes(adminId)) {
