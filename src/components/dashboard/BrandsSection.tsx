@@ -215,6 +215,20 @@ const BrandsSection = () => {
     setEditingBrand(null);
   };
 
+  const openAdminModal = (brand: Brand) => {
+    setSelectedBrandForAdmin(brand);
+    setIsAdminModalOpen(true);
+  };
+
+  const closeAdminModal = () => {
+    setIsAdminModalOpen(false);
+    setSelectedBrandForAdmin(null);
+  };
+
+  const handleAdminAssignmentSuccess = () => {
+    refetchBrands();
+  };
+
   if (brandsLoading) {
     return (
       <div className="flex items-center justify-center py-8">
