@@ -30,7 +30,6 @@ interface AssignedBrand {
 }
 
 const AdminAssignedBrands = () => {
-  // Mock assigned brands data - in real app this would come from API
   const assignedBrands: AssignedBrand[] = [
     {
       id: "1",

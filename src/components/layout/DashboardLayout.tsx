@@ -120,51 +120,6 @@ const DashboardLayout = ({
     localStorage.removeItem("user");
     navigate("/");
   };
-
-  // const getSidebarItems = (): SidebarItem[] => {
-  //   // Mock campaigns data - in real app this would come from API
-  //   const campaigns = [
-  //     { label: "Diabetes Awareness Campaign", id: "campaign-1" },
-  //     { label: "Heart Health Initiative", id: "campaign-2" },
-  //     { label: "Mental Wellness Week", id: "campaign-3" },
-  //   ];
-  //
-  //   if (userRole === "superAdmin") {
-  //     return [
-  //       { icon: Building2, label: "Brands", id: "brands" },
-  //       {
-  //         icon: Megaphone,
-  //         label: "Campaigns",
-  //         id: "campaigns",
-  //         subItems: campaigns,
-  //       },
-  //       { icon: Users, label: "Users", id: "users" },
-  //     ];
-  //   } else if (userRole === "admin") {
-  //     // Mock assigned brands count - in real app this would come from API
-  //     const assignedBrandsCount = 2; // This admin is assigned to 2 brands
-  //
-  //     return [
-  //       {
-  //         icon: Megaphone,
-  //         label: "Campaigns",
-  //         id: "campaigns",
-  //         subItems: campaigns,
-  //       },
-  //       { icon: Users, label: "Nurses", id: "nurses" },
-  //       {
-  //         icon: Building2,
-  //         label: `My Brands (${assignedBrandsCount})`,
-  //         id: "admin-brands",
-  //       },
-  //     ];
-  //   } else if (userRole === "nurse") {
-  //     return [
-  //       { icon: Megaphone, label: "My Campaigns", id: "assigned-campaigns" },
-  //     ];
-  //   }
-  //   return [];
-  // };
   const getSidebarItems = (): SidebarItem[] => {
     if (userRole === "superAdmin") {
       return [
