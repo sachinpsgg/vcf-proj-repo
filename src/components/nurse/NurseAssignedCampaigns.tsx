@@ -544,17 +544,24 @@ END:VCARD`;
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        onClick={() =>
-                          window.open(urlData.patientUrl, "_blank")
-                        }
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Open
-                      </Button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          onClick={() => handleDownloadVCF(urlData)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            window.open(urlData.patientUrl, "_blank")
+                          }
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
