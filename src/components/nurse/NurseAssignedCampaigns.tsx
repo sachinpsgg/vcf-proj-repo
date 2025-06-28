@@ -446,7 +446,6 @@ END:VCARD`;
                       onClick={() => openUrlModal(campaign)}
                       size="sm"
                       className="gap-2"
-                      disabled={campaign.campaignStatus !== "active"}
                     >
                       <Link className="w-4 h-4" />
                       Generate URL

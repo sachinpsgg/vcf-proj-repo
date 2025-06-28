@@ -297,11 +297,7 @@ END:VCARD`;
             Campaign details and URL management
           </p>
         </div>
-        <Button
-          onClick={() => setIsUrlModalOpen(true)}
-          className="gap-2"
-          disabled={campaign.campaignStatus !== "active"}
-        >
+        <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
           <Link className="w-4 h-4" />
           Generate URL
         </Button>
