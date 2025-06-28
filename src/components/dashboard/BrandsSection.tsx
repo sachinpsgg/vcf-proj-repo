@@ -140,6 +140,9 @@ const fetchNurses = async (): Promise<NurseApiData[]> => {
 const BrandsSection = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedBrandForAdmin, setSelectedBrandForAdmin] =
+    useState<Brand | null>(null);
 
   // Fetch brands data
   const {
