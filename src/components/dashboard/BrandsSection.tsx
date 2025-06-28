@@ -447,6 +447,18 @@ const BrandsSection = () => {
         initialData={editingBrand}
         isEditing={!!editingBrand}
       />
+
+      {/* Admin Assignment Modal */}
+      {selectedBrandForAdmin && (
+        <AdminAssignmentModal
+          isOpen={isAdminModalOpen}
+          onClose={closeAdminModal}
+          onSuccess={handleAdminAssignmentSuccess}
+          brandId={Number(selectedBrandForAdmin.id)}
+          brandName={selectedBrandForAdmin.name}
+          currentAdmins={selectedBrandForAdmin.assignedAdmins}
+        />
+      )}
     </div>
   );
 };
