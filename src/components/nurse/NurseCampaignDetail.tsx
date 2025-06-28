@@ -39,12 +39,19 @@ import {
   Copy,
   Mail,
   Upload,
+  Download,
+  Edit,
   Loader2,
+  FileText,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
 
-interface NurseCampaignApiData {
+interface NurseCampaignDetailProps {
+  campaignId: number;
+}
+
+interface CampaignApiData {
   campaign_id: number;
   brand_id: number;
   campaign_name: string;
@@ -91,14 +98,16 @@ interface URLFormData {
 }
 
 // Fetch functions
-const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
+const fetchCampaignById = async (
+  campaignId: number,
+): Promise<CampaignApiData> => {
   const storedAuth = localStorage.getItem("user");
   if (!storedAuth) throw new Error("User not authenticated");
 
   const { token } = JSON.parse(storedAuth);
 
   const response = await fetch(
-    "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/get-nurse-campaigns",
+    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaigns/${campaignId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -107,11 +116,11 @@ const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
   );
 
   if (!response.ok) {
-    throw new Error("Failed to fetch nurse campaigns");
+    throw new Error("Failed to fetch campaign");
   }
 
   const data = await response.json();
-  return data.campaigns || [];
+  return data.campaign;
 };
 
 const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
@@ -137,11 +146,10 @@ const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
   return data.brand;
 };
 
-const NurseAssignedCampaigns = () => {
+const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] =
-    useState<NurseCampaignApiData | null>(null);
+  const [editingUrl, setEditingUrl] = useState<GeneratedURL | null>(null);
   const [formData, setFormData] = useState<URLFormData>({
     doctorPhone: "",
     doctorName: "",
@@ -149,22 +157,22 @@ const NurseAssignedCampaigns = () => {
     logo: null,
   });
 
-  // Fetch nurse campaigns
+  // Fetch campaign data
   const {
-    data: campaigns,
-    isLoading: campaignsLoading,
-    error: campaignsError,
+    data: campaign,
+    isLoading: campaignLoading,
+    error: campaignError,
   } = useQuery({
-    queryKey: ["nurse-campaigns"],
-    queryFn: fetchNurseCampaigns,
+    queryKey: ["campaign", campaignId],
+    queryFn: () => fetchCampaignById(campaignId),
     staleTime: 30000,
   });
 
-  // Fetch brand data for the first campaign (assuming all campaigns are for the same brand)
+  // Fetch brand data
   const { data: brand, isLoading: brandLoading } = useQuery({
-    queryKey: ["nurse-brand", campaigns?.[0]?.brand_id],
-    queryFn: () => fetchBrandById(campaigns![0].brand_id),
-    enabled: !!campaigns?.[0]?.brand_id,
+    queryKey: ["brand", campaign?.brand_id],
+    queryFn: () => fetchBrandById(campaign!.brand_id),
+    enabled: !!campaign?.brand_id,
     staleTime: 30000,
   });
 
@@ -175,7 +183,7 @@ const NurseAssignedCampaigns = () => {
 
   const generateVCFContent = (
     data: URLFormData,
-    campaign: NurseCampaignApiData,
+    campaign: CampaignApiData,
     brand: BrandApiData,
   ) => {
     return `BEGIN:VCARD
@@ -189,22 +197,17 @@ END:VCARD`;
   };
 
   const handleGenerateUrl = () => {
-    if (
-      !selectedCampaign ||
-      !formData.doctorPhone ||
-      !formData.doctorName ||
-      !brand
-    )
+    if (!formData.doctorPhone || !formData.doctorName || !campaign || !brand)
       return;
 
-    const vcfContent = generateVCFContent(formData, selectedCampaign, brand);
+    const vcfContent = generateVCFContent(formData, campaign, brand);
     const vcfBlob = new Blob([vcfContent], { type: "text/vcard" });
     const vcfUrl = URL.createObjectURL(vcfBlob);
 
     const newUrl: GeneratedURL = {
-      id: Date.now().toString(),
-      campaignId: selectedCampaign.campaign_id.toString(),
-      campaignName: selectedCampaign.campaign_name,
+      id: editingUrl?.id || Date.now().toString(),
+      campaignId: campaign.campaign_id.toString(),
+      campaignName: campaign.campaign_name,
       doctorPhone: formData.doctorPhone,
       doctorName: formData.doctorName,
       description: formData.description,
@@ -215,7 +218,20 @@ END:VCARD`;
       isActive: true,
     };
 
-    setGeneratedUrls([newUrl, ...generatedUrls]);
+    if (editingUrl) {
+      setGeneratedUrls(
+        generatedUrls.map((url) => (url.id === editingUrl.id ? newUrl : url)),
+      );
+      toast.success("Patient URL updated successfully!");
+    } else {
+      setGeneratedUrls([newUrl, ...generatedUrls]);
+      toast.success("Patient URL generated successfully!");
+    }
+
+    resetForm();
+  };
+
+  const resetForm = () => {
     setFormData({
       doctorPhone: "",
       doctorName: "",
@@ -223,8 +239,18 @@ END:VCARD`;
       logo: null,
     });
     setIsUrlModalOpen(false);
-    setSelectedCampaign(null);
-    toast.success("Patient URL generated successfully!");
+    setEditingUrl(null);
+  };
+
+  const handleEditUrl = (url: GeneratedURL) => {
+    setEditingUrl(url);
+    setFormData({
+      doctorPhone: url.doctorPhone,
+      doctorName: url.doctorName,
+      description: url.description,
+      logo: null, // Can't restore file input
+    });
+    setIsUrlModalOpen(true);
   };
 
   const handleCopyUrl = (url: string) => {
@@ -232,36 +258,29 @@ END:VCARD`;
     toast.success("URL copied to clipboard!");
   };
 
-  const openUrlModal = (campaign: NurseCampaignApiData) => {
-    setSelectedCampaign(campaign);
-    setIsUrlModalOpen(true);
+  const handleDownloadVCF = (url: GeneratedURL) => {
+    const link = document.createElement("a");
+    link.href = url.vcfUrl;
+    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("VCF card downloaded!");
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    return status === "active" ? "default" : "secondary";
-  };
-
-  if (campaignsLoading || brandLoading) {
+  if (campaignLoading || brandLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Loading campaigns...</span>
+        <span className="ml-2">Loading campaign details...</span>
       </div>
     );
   }
 
-  if (campaignsError) {
+  if (campaignError || !campaign) {
     return (
       <div className="flex items-center justify-center py-8 text-red-500">
-        <span>Error loading campaigns: {campaignsError.message}</span>
-      </div>
-    );
-  }
-
-  if (!campaigns || campaigns.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-8 text-muted-foreground">
-        <span>No campaigns assigned</span>
+        <span>Error loading campaign details</span>
       </div>
     );
   }
@@ -271,67 +290,72 @@ END:VCARD`;
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Campaigns</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            {campaign.campaign_name}
+          </h1>
           <p className="text-muted-foreground mt-1">
-            View your assigned campaigns and generate patient URLs
+            Campaign details and URL management
           </p>
         </div>
+        <Button
+          onClick={() => setIsUrlModalOpen(true)}
+          className="gap-2"
+          disabled={campaign.campaignStatus !== "active"}
+        >
+          <Link className="w-4 h-4" />
+          Generate URL
+        </Button>
       </div>
 
-      {/* Brand Information Card */}
-      {brand && (
-        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-          <CardHeader>
-            <div className="flex items-center space-x-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={brand.logo_url} alt={brand.brand_name} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {brand.brand_name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <CardTitle className="text-xl">{brand.brand_name}</CardTitle>
-                <CardDescription className="text-base">
-                  {brand.description}
-                </CardDescription>
-                <div className="flex items-center space-x-4 mt-2">
-                  <Badge variant="default" className="gap-1">
-                    <Building2 className="w-3 h-3" />
-                    My Assigned Brand
-                  </Badge>
-                  <Badge
-                    variant={
-                      brand.brandStatus === "active" ? "default" : "secondary"
-                    }
-                  >
-                    {brand.brandStatus}
-                  </Badge>
+      {/* Campaign Info Card */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardHeader>
+          <div className="flex items-center space-x-4">
+            <Avatar className="w-16 h-16">
+              <AvatarImage
+                src={campaign.logo_url}
+                alt={campaign.campaign_name}
+              />
+              <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                {campaign.campaign_name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <CardTitle className="text-xl">
+                {campaign.campaign_name}
+              </CardTitle>
+              <CardDescription className="text-base">
+                {brand?.brand_name} • {campaign.notes}
+              </CardDescription>
+              <div className="flex items-center space-x-4 mt-2">
+                <Badge
+                  variant={
+                    campaign.campaignStatus === "active"
+                      ? "default"
+                      : "secondary"
+                  }
+                  className="gap-1"
+                >
+                  <Building2 className="w-3 h-3" />
+                  {campaign.campaignStatus}
+                </Badge>
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  {new Date(campaign.start_date).toLocaleDateString()} -{" "}
+                  {new Date(campaign.end_date).toLocaleDateString()}
                 </div>
               </div>
             </div>
-          </CardHeader>
-        </Card>
-      )}
+          </div>
+        </CardHeader>
+      </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Assigned Campaigns
-            </CardTitle>
-            <Megaphone className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{campaigns.length}</div>
-            <p className="text-xs text-muted-foreground">Active campaigns</p>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -341,9 +365,7 @@ END:VCARD`;
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{generatedUrls.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Patient URLs created
-            </p>
+            <p className="text-xs text-muted-foreground">Total generated</p>
           </CardContent>
         </Card>
 
@@ -362,148 +384,68 @@ END:VCARD`;
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Brand</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">VCF Cards</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold">
-              {brand?.brand_name.slice(0, 10) || "Loading..."}
-            </div>
-            <p className="text-xs text-muted-foreground">Assigned brand</p>
+            <div className="text-2xl font-bold">{generatedUrls.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Contact cards created
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Assigned Campaigns Table */}
+      {/* Generated URLs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Assigned Campaigns</CardTitle>
+          <CardTitle>Generated Patient URLs</CardTitle>
           <CardDescription>
-            Campaigns assigned to you by administrators
+            Track and manage URLs you've generated for this campaign
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Brand</TableHead>
+                <TableHead>Doctor Info</TableHead>
+                <TableHead>Patient URL</TableHead>
+                <TableHead>Generated</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {campaigns.map((campaign) => (
-                <TableRow key={campaign.campaign_id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage
-                          src={campaign.logo_url}
-                          alt={campaign.campaign_name}
-                        />
-                        <AvatarFallback>
-                          {campaign.campaign_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">
-                          {campaign.campaign_name}
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {campaign.notes}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {brand?.brand_name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={getStatusBadgeVariant(campaign.campaignStatus)}
-                    >
-                      {campaign.campaignStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {new Date(campaign.start_date).toLocaleDateString()} -{" "}
-                      {new Date(campaign.end_date).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(campaign.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      onClick={() => openUrlModal(campaign)}
-                      size="sm"
-                      className="gap-2"
-                      disabled={campaign.campaignStatus !== "active"}
-                    >
-                      <Link className="w-4 h-4" />
-                      Generate URL
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Generated URLs Table */}
-      {generatedUrls.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Generated Patient URLs</CardTitle>
-            <CardDescription>
-              Track and manage URLs you've generated for patients
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
+              {generatedUrls.length === 0 ? (
                 <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Doctor Info</TableHead>
-                  <TableHead>Patient URL</TableHead>
-                  <TableHead>Generated</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    No URLs generated yet
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {generatedUrls.map((urlData) => (
+              ) : (
+                generatedUrls.map((urlData) => (
                   <TableRow key={urlData.id}>
-                    <TableCell className="font-medium">
-                      {urlData.campaignName}
-                    </TableCell>
                     <TableCell>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-3">
                         {urlData.logo && (
-                          <Avatar className="w-6 h-6">
+                          <Avatar className="w-8 h-8">
                             <AvatarImage
                               src={urlData.logo}
                               alt={urlData.doctorName}
                             />
-                            <AvatarFallback className="text-xs">
+                            <AvatarFallback>
                               {urlData.doctorName.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                         )}
                         <div>
-                          <div className="font-medium text-sm">
+                          <div className="font-medium">
                             {urlData.doctorName}
                           </div>
-                          <div className="text-xs text-muted-foreground font-mono">
+                          <div className="text-sm text-muted-foreground font-mono">
                             {urlData.doctorPhone}
                           </div>
                         </div>
@@ -534,42 +476,58 @@ END:VCARD`;
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        onClick={() =>
-                          window.open(urlData.patientUrl, "_blank")
-                        }
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Open
-                      </Button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          onClick={() => handleEditUrl(urlData)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDownloadVCF(urlData)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            window.open(urlData.patientUrl, "_blank")
+                          }
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Generate URL Modal */}
       <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Generate Patient URL</DialogTitle>
+            <DialogTitle>
+              {editingUrl ? "Edit Patient URL" : "Generate Patient URL"}
+            </DialogTitle>
             <DialogDescription>
-              Create a unique URL and VCF card for a patient
+              {editingUrl
+                ? "Update the patient URL information"
+                : "Create a unique URL and VCF card for a patient"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Selected Campaign</Label>
+              <Label>Campaign</Label>
               <div className="p-3 bg-muted rounded-lg">
-                <div className="font-medium">
-                  {selectedCampaign?.campaign_name}
-                </div>
+                <div className="font-medium">{campaign.campaign_name}</div>
                 <div className="text-sm text-muted-foreground">
                   {brand?.brand_name}
                 </div>
@@ -647,19 +605,7 @@ END:VCARD`;
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsUrlModalOpen(false);
-                setSelectedCampaign(null);
-                setFormData({
-                  doctorPhone: "",
-                  doctorName: "",
-                  description: "",
-                  logo: null,
-                });
-              }}
-            >
+            <Button variant="outline" onClick={resetForm}>
               Cancel
             </Button>
             <Button
@@ -668,7 +614,7 @@ END:VCARD`;
               className="gap-2"
             >
               <Link className="w-4 h-4" />
-              Generate URL
+              {editingUrl ? "Update URL" : "Generate URL"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -677,4 +623,4 @@ END:VCARD`;
   );
 };
 
-export default NurseAssignedCampaigns;
+export default NurseCampaignDetail;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X, UserPlus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { UserRole } from "@/pages/Login";
 
 export type UserStatus = "Active" | "Inactive";
@@ -43,19 +43,51 @@ export interface User {
 interface UserFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Omit<User, "id" | "createdAt">) => void;
+  onSubmit: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    brandId: number;
+  }) => void;
   initialData?: User | null;
   isEditing: boolean;
   defaultRole?: UserRole;
 }
 
-// Mock available brands
-const availableBrands: Brand[] = [
-  { id: "1", name: "HealthTech Solutions" },
-  { id: "2", name: "MedCare Plus" },
-  { id: "3", name: "Wellness Group" },
-  { id: "4", name: "LifeCare Medical" },
-];
+interface BrandApiData {
+  brand_id: number;
+  brand_name: string;
+  logo_url: string;
+  admin_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Fetch brands function
+const fetchBrands = async (): Promise<BrandApiData[]> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  const response = await fetch(
+    "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-brands",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch brands");
+  }
+
+  const data = await response.json();
+  return data.brands || [];
+};
 
 const UserFormModal = ({
   isOpen,
@@ -71,11 +103,20 @@ const UserFormModal = ({
     email: "",
     password: "",
     role: defaultRole,
-    status: "Active" as UserStatus,
-    assignedBrands: [] as Brand[],
+    brandId: "",
   });
 
-  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  // Fetch brands data
+  const {
+    data: brandsData,
+    isLoading: brandsLoading,
+    error: brandsError,
+  } = useQuery({
+    queryKey: ["brands"],
+    queryFn: fetchBrands,
+    staleTime: 30000,
+    enabled: isOpen, // Only fetch when modal is open
+  });
 
   useEffect(() => {
     if (initialData) {
@@ -85,8 +126,7 @@ const UserFormModal = ({
         email: initialData.email,
         password: initialData.password,
         role: initialData.role,
-        status: initialData.status,
-        assignedBrands: initialData.assignedBrands,
+        brandId: initialData.assignedBrands[0]?.id || "",
       });
     } else {
       setFormData({
@@ -95,48 +135,35 @@ const UserFormModal = ({
         email: "",
         password: "",
         role: defaultRole,
-        status: "Active",
-        assignedBrands: [],
+        brandId: "",
       });
     }
   }, [initialData, isOpen, defaultRole]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    if (!formData.brandId) {
+      alert("Please select a brand");
+      return;
+    }
+
+    onSubmit({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      brandId: parseInt(formData.brandId),
+    });
     onClose();
   };
-
-  const handleAddBrand = () => {
-    if (selectedBrand) {
-      const brand = availableBrands.find((b) => b.id === selectedBrand);
-      if (brand && !formData.assignedBrands.find((b) => b.id === brand.id)) {
-        setFormData((prev) => ({
-          ...prev,
-          assignedBrands: [...prev.assignedBrands, brand],
-        }));
-        setSelectedBrand("");
-      }
-    }
-  };
-
-  const handleRemoveBrand = (brandId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      assignedBrands: prev.assignedBrands.filter((b) => b.id !== brandId),
-    }));
-  };
-
-  const getAvailableBrands = () =>
-    availableBrands.filter(
-      (brand) => !formData.assignedBrands.find((b) => b.id === brand.id),
-    );
 
   const roleOptions: UserRole[] = ["admin", "nurse"];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing
@@ -145,13 +172,13 @@ const UserFormModal = ({
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Update user information and brand assignments"
-              : `Create a new ${defaultRole === "admin" ? "administrator" : "nurse"} account with brand access`}
+              ? "Update user information and brand assignment"
+              : `Create a new ${defaultRole === "admin" ? "administrator" : "nurse"} account`}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
               <Input
@@ -183,137 +210,107 @@ const UserFormModal = ({
                 required
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
-                placeholder="user@company.com"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    password: e.target.value,
-                  }))
-                }
-                placeholder="Enter password"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value: UserRole) =>
-                  setFormData((prev) => ({ ...prev, role: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roleOptions.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role === "admin" ? "Administrator" : "Nurse"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">User Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: UserStatus) =>
-                  setFormData((prev) => ({ ...prev, status: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <Label className="text-base font-medium">Assigned Brands</Label>
-              <div className="mt-2 space-y-3">
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedBrand}
-                    onValueChange={setSelectedBrand}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a brand" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableBrands().map((brand) => (
-                        <SelectItem key={brand.id} value={brand.id}>
-                          {brand.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    onClick={handleAddBrand}
-                    disabled={!selectedBrand}
-                    size="icon"
-                    variant="outline"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
-                </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, email: e.target.value }))
+              }
+              placeholder="user@company.com"
+              required
+            />
+          </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {formData.assignedBrands.map((brand) => (
-                    <Badge key={brand.id} variant="secondary" className="gap-1">
-                      {brand.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBrand(brand.id)}
-                        className="hover:bg-destructive/20 rounded-full p-0.5"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {formData.assignedBrands.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      No brands assigned
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  password: e.target.value,
+                }))
+              }
+              placeholder="Enter password"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select
+              value={formData.role}
+              onValueChange={(value: UserRole) =>
+                setFormData((prev) => ({ ...prev, role: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {roleOptions.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role === "admin" ? "Administrator" : "Nurse"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="brand">Brand</Label>
+            <Select
+              value={formData.brandId}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, brandId: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    brandsLoading
+                      ? "Loading brands..."
+                      : brandsError
+                        ? "Error loading brands"
+                        : "Select a brand"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {brandsLoading ? (
+                  <div className="flex items-center justify-center p-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : brandsError ? (
+                  <div className="p-2 text-sm text-red-500">
+                    Error loading brands
+                  </div>
+                ) : (
+                  brandsData?.map((brand) => (
+                    <SelectItem
+                      key={brand.brand_id}
+                      value={brand.brand_id.toString()}
+                    >
+                      {brand.brand_name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={brandsLoading}>
               {isEditing
                 ? `Update ${formData.role === "admin" ? "Administrator" : "Nurse"}`
                 : `Create ${defaultRole === "admin" ? "Administrator" : "Nurse"}`}

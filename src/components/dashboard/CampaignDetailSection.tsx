@@ -1,4 +1,5 @@
-import { useState } from "react";
+  import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,12 +27,10 @@ import {
   Phone,
   Calendar,
   Building2,
+  Loader2,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
-import type {
-  Campaign,
-  CampaignStatus,
-} from "@/components/dashboard/CampaignsSection";
+import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
 import { toast } from "sonner";
 
 interface CampaignDetailSectionProps {
@@ -39,76 +38,213 @@ interface CampaignDetailSectionProps {
   userRole: "superAdmin" | "admin" | "nurse";
 }
 
+interface CampaignApiData {
+  campaign_id: number;
+  brand_id: number;
+  campaign_name: string;
+  logo_url: string;
+  campaign_url: string | null;
+  campaignStatus: string;
+  start_date: string;
+  end_date: string;
+  created_by: number;
+  notes: string;
+  work_number: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface NurseApiData {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  userStatus: string;
+  created_at: string;
+}
+
+interface CampaignPayload {
+  name: string;
+  logo_url: string;
+  brand_id: number;
+  start_date: string;
+  end_date: string;
+  notes: string;
+  nurse_ids: number[];
+}
+
+// Fetch functions
+const fetchCampaignById = async (
+  campaignId: string,
+): Promise<CampaignApiData> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  // Extract numeric ID from campaign-{id} format
+  const numericId = campaignId.replace("campaign-", "");
+
+  const response = await fetch(
+    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/getById?campaign_id=${numericId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch campaign");
+  }
+
+  const data = await response.json();
+  return data.campaigns[0]; // API returns campaigns array with single item
+};
+
+const fetchCampaignNurses = async (
+  campaignId: string,
+): Promise<NurseApiData[]> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  // Extract numeric ID from campaign-{id} format
+  const numericId = campaignId.replace("campaign-", "");
+
+  const response = await fetch(
+    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/get-nurses?campaign_id=${numericId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch campaign nurses");
+  }
+
+  const data = await response.json();
+  return data.nurses || [];
+};
+
 const CampaignDetailSection = ({
   campaignId,
   userRole,
 }: CampaignDetailSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  console.log(campaignId)
-  const campaign: Campaign = {
-    id: campaignId,
-    name:
-      campaignId === "campaign-1"
-        ? "Diabetes Awareness Campaign"
-        : campaignId === "campaign-2"
-          ? "Heart Health Initiative"
-          : "Mental Wellness Week",
-    logo: "/api/placeholder/60/60",
-    brandName: "HealthTech Solutions",
-    status:
-      campaignId === "campaign-1"
-        ? "Prod"
-        : campaignId === "campaign-2"
-          ? "UAT"
-          : "Draft",
-    phoneNumber: "+1 (555) 123-4567",
-    notes:
-      "Annual health awareness and prevention campaign targeting community outreach",
-    assignedNurses: [
-      { id: "1", name: "Sarah Wilson", email: "sarah@healthtech.com" },
-      { id: "2", name: "Mike Johnson", email: "mike@healthtech.com" },
-    ],
-    createdAt: new Date("2024-01-15"),
+
+  // Fetch campaign data
+  const {
+    data: campaign,
+    isLoading: campaignLoading,
+    error: campaignError,
+    refetch: refetchCampaign,
+  } = useQuery({
+    queryKey: ["campaign", campaignId],
+    queryFn: () => fetchCampaignById(campaignId),
+    staleTime: 30000,
+  });
+
+  // Fetch campaign nurses
+  const {
+    data: nurses,
+    isLoading: nursesLoading,
+    error: nursesError,
+    refetch: refetchNurses,
+  } = useQuery({
+    queryKey: ["campaign-nurses", campaignId],
+    queryFn: () => fetchCampaignNurses(campaignId),
+    staleTime: 30000,
+  });
+
+  const handleEditCampaign = async (campaignData: CampaignPayload) => {
+    try {
+      // Dummy API call for update - will be replaced with actual update endpoint later
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+
+      console.log("Updating campaign with data:", campaignData);
+
+      // Dummy API call simulation - replace this with actual update API
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // TODO: Replace with actual update API:
+      // const response = await fetch(`https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update/${campaign.campaign_id}`, {
+      //   method: "PUT",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      //   body: JSON.stringify(campaignData),
+      // });
+      //
+      // if (!response.ok) {
+      //   const err = await response.json();
+      //   throw new Error(err.message || "Failed to update campaign");
+      // }
+
+      toast.success("Campaign updated successfully");
+      setIsModalOpen(false);
+      refetchCampaign();
+      refetchNurses();
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      toast.error("Failed to update campaign");
+    }
   };
 
-  const handleEditCampaign = (
-    campaignData: Omit<Campaign, "id" | "createdAt">,
-  ) => {
-    // In real app, this would update the campaign via API
-    toast.success("Campaign updated successfully");
+  const handleCreateCampaign = (campaignData: CampaignPayload) => {
+    // The actual API call is handled inside CampaignFormModal
+    // This callback is triggered after successful creation
+    toast.success("Campaign created successfully! Refreshing data...");
     setIsModalOpen(false);
-  };
-
-  const handleCreateCampaign = (
-    campaignData: Omit<Campaign, "id" | "createdAt">,
-  ) => {
-    // In real app, this would create a new campaign via API
-    toast.success("New campaign created successfully");
-    setIsModalOpen(false);
+    // Optionally refetch data if needed
+    refetchCampaign();
   };
 
   const handleToggleStatus = () => {
+    if (!campaign) return;
+
     const newStatus =
-      campaign.status === "Deactivated" ? "Draft" : "Deactivated";
+      campaign.campaignStatus === "active" ? "deactivated" : "active";
     toast.success(
-      `Campaign ${newStatus === "Deactivated" ? "deactivated" : "reactivated"}`,
+      `Campaign ${newStatus === "deactivated" ? "deactivated" : "reactivated"}`,
     );
   };
 
-  const getStatusBadgeVariant = (status: CampaignStatus) => {
-    switch (status) {
-      case "Prod":
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "active":
         return "default";
-      case "UAT":
-        return "secondary";
-      case "Draft":
+      case "draft":
         return "outline";
-      case "Deactivated":
+      case "uat":
+        return "secondary";
+      case "deactivated":
         return "destructive";
       default:
         return "outline";
     }
+  };
+
+  const formatCampaignForEdit = (
+    campaign: CampaignApiData,
+  ): CampaignPayload => {
+    return {
+      name: campaign.campaign_name,
+      logo_url: campaign.logo_url,
+      brand_id: campaign.brand_id,
+      start_date: campaign.start_date.split("T")[0], // Convert to YYYY-MM-DD format
+      end_date: campaign.end_date.split("T")[0],
+      notes: campaign.notes,
+      nurse_ids: nurses?.map((nurse) => nurse.user_id) || [],
+    };
   };
 
   const openEditModal = () => {
@@ -121,36 +257,64 @@ const CampaignDetailSection = ({
     setIsModalOpen(true);
   };
 
+  if (campaignLoading || nursesLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-2">Loading campaign details...</span>
+      </div>
+    );
+  }
+
+  if (campaignError || !campaign) {
+    return (
+      <div className="flex items-center justify-center py-8 text-red-500">
+        <span>Error loading campaign: {campaignError?.message}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-2"
+          onClick={() => refetchCampaign()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Campaign Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
           <Avatar className="w-16 h-16">
-            <AvatarImage src={campaign.logo} alt={campaign.name} />
+            <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
             <AvatarFallback className="text-lg">
-              {campaign.name
+              {campaign.campaign_name
                 .split(" ")
                 .map((n) => n[0])
-                .join("")}
+                .join("")
+                .slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              {campaign.name}
+              {campaign.campaign_name}
             </h1>
             <div className="flex items-center space-x-4 mt-2">
-              <Badge variant={getStatusBadgeVariant(campaign.status)}>
-                {campaign.status}
+              <Badge variant={getStatusBadgeVariant(campaign.campaignStatus)}>
+                {campaign.campaignStatus}
               </Badge>
               <div className="flex items-center text-muted-foreground">
                 <Building2 className="w-4 h-4 mr-1" />
-                {campaign.brandName}
+                Brand ID: {campaign.brand_id}
               </div>
-              <div className="flex items-center text-muted-foreground">
-                <Phone className="w-4 h-4 mr-1" />
-                {campaign.phoneNumber}
-              </div>
+              {campaign.work_number && (
+                <div className="flex items-center text-muted-foreground">
+                  <Phone className="w-4 h-4 mr-1" />
+                  {campaign.work_number}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -163,19 +327,23 @@ const CampaignDetailSection = ({
             onClick={openEditModal}
             variant="outline"
             className="gap-2"
-            disabled={campaign.status === "Prod"}
+            disabled={campaign.campaignStatus === "active"}
           >
             <Edit className="w-4 h-4" />
-            {campaign.status === "Prod" ? "Edit (Production)" : "Edit Campaign"}
+            {campaign.campaignStatus === "active"
+              ? "Edit (Active)"
+              : "Edit Campaign"}
           </Button>
           <Button
             onClick={handleToggleStatus}
             variant={
-              campaign.status === "Deactivated" ? "default" : "destructive"
+              campaign.campaignStatus === "deactivated"
+                ? "default"
+                : "destructive"
             }
             className="gap-2"
           >
-            {campaign.status === "Deactivated" ? (
+            {campaign.campaignStatus === "deactivated" ? (
               <>
                 <Power className="w-4 h-4" />
                 Reactivate
@@ -191,7 +359,7 @@ const CampaignDetailSection = ({
       </div>
 
       {/* Campaign Details */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -199,7 +367,9 @@ const CampaignDetailSection = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campaign.status}</div>
+            <div className="text-2xl font-bold capitalize">
+              {campaign.campaignStatus}
+            </div>
             <p className="text-xs text-muted-foreground">
               Current stage of campaign
             </p>
@@ -214,23 +384,34 @@ const CampaignDetailSection = ({
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {campaign.assignedNurses.length}
-            </div>
+            <div className="text-2xl font-bold">{nurses?.length || 0}</div>
             <p className="text-xs text-muted-foreground">Active team members</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Created Date</CardTitle>
+            <CardTitle className="text-sm font-medium">Start Date</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {campaign.createdAt.toLocaleDateString()}
+            <div className="text-lg font-bold">
+              {new Date(campaign.start_date).toLocaleDateString()}
             </div>
-            <p className="text-xs text-muted-foreground">Campaign launch</p>
+            <p className="text-xs text-muted-foreground">Campaign start</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">End Date</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold">
+              {new Date(campaign.end_date).toLocaleDateString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Campaign end</p>
           </CardContent>
         </Card>
       </div>
@@ -252,46 +433,77 @@ const CampaignDetailSection = ({
           <CardDescription>Nurses assigned to this campaign</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nurse</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Role</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaign.assignedNurses.map((nurse) => (
-                <TableRow key={nurse.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback>
-                          {nurse.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{nurse.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {nurse.email}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="default">Active</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">
-                      Campaign Nurse
-                    </span>
-                  </TableCell>
+          {nursesError ? (
+            <div className="text-center py-4 text-red-500">
+              <span>Error loading nurses: {nursesError.message}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2"
+                onClick={() => refetchNurses()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nurse</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {nurses && nurses.length > 0 ? (
+                  nurses.map((nurse) => (
+                    <TableRow key={nurse.user_id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback>
+                              {nurse.first_name.charAt(0)}
+                              {nurse.last_name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">
+                            {nurse.first_name} {nurse.last_name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {nurse.email}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            nurse.userStatus === "active"
+                              ? "default"
+                              : "secondary"
+                          }
+                        >
+                          {nurse.userStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(nurse.created_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-4 text-muted-foreground"
+                    >
+                      No nurses assigned to this campaign
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -300,7 +512,9 @@ const CampaignDetailSection = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}
-        initialData={isEditing ? campaign : null}
+        initialData={
+          isEditing && campaign ? formatCampaignForEdit(campaign) : null
+        }
         isEditing={isEditing}
       />
     </div>

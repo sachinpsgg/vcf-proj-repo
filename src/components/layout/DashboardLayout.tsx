@@ -1,5 +1,12 @@
-import { ReactNode, useState, createContext, useContext, useEffect } from "react";
+import {
+  ReactNode,
+  useState,
+  createContext,
+  useContext,
+  useEffect,
+} from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -24,6 +31,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Home,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/pages/Login";
@@ -43,6 +51,78 @@ interface SidebarItem {
   subItems?: { label: string; id: string }[];
 }
 
+interface NurseCampaignApiData {
+  campaign_id: number;
+  brand_id: number;
+  campaign_name: string;
+  logo_url: string;
+  campaignStatus: string;
+  start_date: string;
+  end_date: string;
+  created_by: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BrandApiData {
+  brand_id: number;
+  brand_name: string;
+  logo_url: string;
+  description: string;
+  brandStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Fetch functions for nurse data
+const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  const response = await fetch(
+    "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/get-nurse-campaigns",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch nurse campaigns");
+  }
+
+  const data = await response.json();
+  return data.campaigns || [];
+};
+
+const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  const response = await fetch(
+    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/${brandId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch brand");
+  }
+
+  const data = await response.json();
+  return data.brand;
+};
+
 const DashboardLayout = ({
   children,
   userRole,
@@ -54,9 +134,30 @@ const DashboardLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeItem, setActiveItem] = useState(activeSection);
   const [expandedItems, setExpandedItems] = useState<string[]>(["campaigns"]);
-  const [campaigns, setCampaigns] = useState<{ label: string; id: string }[]>([]);
+  const [campaigns, setCampaigns] = useState<{ label: string; id: string }[]>(
+    [],
+  );
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
+  // Fetch nurse campaigns if user is a nurse
+  const {
+    data: nurseCampaigns,
+    isLoading: nurseCampaignsLoading,
+    error: nurseCampaignsError,
+  } = useQuery({
+    queryKey: ["nurse-campaigns"],
+    queryFn: fetchNurseCampaigns,
+    enabled: userRole === "nurse",
+    staleTime: 30000,
+  });
+
+  // Fetch brand data for nurse campaigns
+  const { data: nurseBrand, isLoading: nurseBrandLoading } = useQuery({
+    queryKey: ["nurse-brand", nurseCampaigns?.[0]?.brand_id],
+    queryFn: () => fetchBrandById(nurseCampaigns![0].brand_id),
+    enabled: userRole === "nurse" && !!nurseCampaigns?.[0]?.brand_id,
+    staleTime: 30000,
+  });
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -67,11 +168,14 @@ const DashboardLayout = ({
         const { token, role } = JSON.parse(storedAuth);
         if (role !== "superAdmin" && role !== "admin") return;
 
-        const res = await fetch("https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-campaigns", {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const res = await fetch(
+          "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-campaigns",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        });
+        );
 
         const data = await res.json();
         const mappedCampaigns = data.campaigns.map((c: any) => ({
@@ -87,8 +191,12 @@ const DashboardLayout = ({
       }
     };
 
-    fetchCampaigns();
-  }, []);
+    if (userRole !== "nurse") {
+      fetchCampaigns();
+    } else {
+      setLoadingCampaigns(false);
+    }
+  }, [userRole]);
 
   const handleItemClick = (itemId: string) => {
     setActiveItem(itemId);
@@ -120,6 +228,7 @@ const DashboardLayout = ({
     localStorage.removeItem("user");
     navigate("/");
   };
+
   const getSidebarItems = (): SidebarItem[] => {
     if (userRole === "superAdmin") {
       return [
@@ -150,6 +259,26 @@ const DashboardLayout = ({
           icon: Building2,
           label: `My Brands (${assignedBrandsCount})`,
           id: "admin-brands",
+        },
+      ];
+    } else if (userRole === "nurse") {
+      // Nurse sidebar with brand and campaigns
+      const nurseCampaignItems =
+        nurseCampaigns?.map((campaign) => ({
+          label: campaign.campaign_name,
+          id: `nurse-campaign-${campaign.campaign_id}`,
+        })) || [];
+
+      return [
+        {
+          icon: Building2,
+          label: nurseBrand?.brand_name || "My Brand",
+          id: "nurse-brand",
+          subItems: nurseCampaignsLoading
+            ? [{ label: "Loading campaigns...", id: "loading" }]
+            : nurseCampaignItems.length > 0
+              ? nurseCampaignItems
+              : [{ label: "No campaigns assigned", id: "no-campaigns" }],
         },
       ];
     }
@@ -206,6 +335,24 @@ const DashboardLayout = ({
               </button>
             )}
 
+            {/* Show loading for nurse while data is being fetched */}
+            {userRole === "nurse" &&
+              (nurseCampaignsLoading || nurseBrandLoading) && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2 text-sm text-sidebar-foreground">
+                    Loading...
+                  </span>
+                </div>
+              )}
+
+            {/* Show error state for nurse */}
+            {userRole === "nurse" && nurseCampaignsError && (
+              <div className="px-4 py-3 text-sm text-red-500">
+                Error loading campaigns
+              </div>
+            )}
+
             {sidebarItems.map((item) => (
               <div key={item.id}>
                 <button
@@ -240,18 +387,31 @@ const DashboardLayout = ({
                     {item.subItems.map((subItem) => (
                       <button
                         key={subItem.id}
-                        onClick={() => subItem.id !== "loading" && handleItemClick(subItem.id)}
-                        disabled={subItem.id === "loading"}
+                        onClick={() =>
+                          subItem.id !== "loading" &&
+                          subItem.id !== "no-campaigns" &&
+                          handleItemClick(subItem.id)
+                        }
+                        disabled={
+                          subItem.id === "loading" ||
+                          subItem.id === "no-campaigns"
+                        }
                         className={cn(
                           "w-full flex items-center space-x-3 px-4 py-2 rounded-md text-left transition-colors text-sm",
-                          subItem.id === "loading"
+                          subItem.id === "loading" ||
+                            subItem.id === "no-campaigns"
                             ? "opacity-50 cursor-not-allowed"
                             : activeItem === subItem.id
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
                               : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                         )}
                       >
-                        <Megaphone className="w-4 h-4 animate-spin" />
+                        <Megaphone
+                          className={cn(
+                            "w-4 h-4",
+                            subItem.id === "loading" && "animate-spin",
+                          )}
+                        />
                         <span>{subItem.label}</span>
                       </button>
                     ))}
@@ -327,10 +487,13 @@ const DashboardLayout = ({
                 {activeItem === "brands" && "Brand Management"}
                 {activeItem === "campaigns" && "Campaign Management"}
                 {activeItem.startsWith("campaign-") && "Campaign Details"}
+                {activeItem.startsWith("nurse-campaign-") && "Campaign Details"}
                 {activeItem === "users" && "User Management"}
                 {activeItem === "nurses" && "Nurse Management"}
                 {activeItem === "assigned-campaigns" && "My Campaigns"}
                 {activeItem === "admin-brands" && "My Assigned Brands"}
+                {activeItem === "nurse-brand" &&
+                  (nurseBrand?.brand_name || "My Brand")}
               </h2>
             </div>
 

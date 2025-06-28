@@ -6,6 +6,7 @@ import CampaignsSection from "@/components/dashboard/CampaignsSection";
 import CampaignDetailSection from "@/components/dashboard/CampaignDetailSection";
 import UsersSection from "@/components/dashboard/UsersSection";
 import NurseAssignedCampaigns from "@/components/nurse/NurseAssignedCampaigns";
+import NurseCampaignDetail from "@/components/nurse/NurseCampaignDetail";
 import AdminAssignedBrands from "@/components/admin/AdminAssignedBrands";
 import type { UserRole } from "./Login";
 
@@ -62,6 +63,12 @@ const Dashboard = () => {
           userRole={user.role}
         />
       );
+    }
+
+    // Handle nurse campaign detail views
+    if (activeSection.startsWith("nurse-campaign-")) {
+      const campaignId = parseInt(activeSection.replace("nurse-campaign-", ""));
+      return <NurseCampaignDetail campaignId={campaignId} />;
     }
 
     switch (activeSection) {
