@@ -3,14 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -126,11 +118,30 @@ const AdminAssignmentModal = ({
   useEffect(() => {
     if (isOpen && currentAdmins) {
       setSelectedAdminIds(currentAdmins.map((admin) => admin.user_id));
-    } else {
+    } else if (!isOpen) {
       setSelectedAdminIds([]);
       setIsSubmitting(false);
     }
   }, [isOpen, currentAdmins]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !isSubmitting) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, isSubmitting, onClose]);
 
   const handleAdminToggle = (adminId: number) => {
     setSelectedAdminIds((prev) => {
@@ -161,6 +172,12 @@ const AdminAssignmentModal = ({
     }
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isSubmitting) {
+      onClose();
+    }
+  };
+
   const selectedAdmins =
     adminsData?.filter((admin) => selectedAdminIds.includes(admin.user_id)) ||
     [];
@@ -174,20 +191,40 @@ const AdminAssignmentModal = ({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Assign Admins to {brandName}
-          </DialogTitle>
-          <DialogDescription>
-            Select administrators to assign to this brand. You can add or remove
-            admins from the current assignment.
-          </DialogDescription>
-        </DialogHeader>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" />
 
-        <div className="space-y-6">
+      {/* Modal Content */}
+      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Assign Admins to {brandName}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Select administrators to assign to this brand. You can add or
+              remove admins from the current assignment.
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-6">
           {/* Currently Selected Admins */}
           {selectedAdmins.length > 0 && (
             <div className="space-y-2">
@@ -281,7 +318,8 @@ const AdminAssignmentModal = ({
           </div>
         </div>
 
-        <DialogFooter>
+        {/* Footer */}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 border-t">
           <Button
             type="button"
             variant="outline"
@@ -297,9 +335,9 @@ const AdminAssignmentModal = ({
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Update Assignment
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
   );
 };
 
