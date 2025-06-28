@@ -3,24 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X, Upload, Users, UserPlus } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { toast } from "sonner";
+
 interface Brand {
   id: string;
   name: string;
@@ -47,20 +32,18 @@ const BrandFormModal = ({
   const [formData, setFormData] = useState({
     name: "",
     logo_url: "",
-    description:"",
+    description: "",
   });
-
-  const [selectedAdmin, setSelectedAdmin] = useState<string>("");
-  const [selectedNurse, setSelectedNurse] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (initialData) {
+    if (isOpen && initialData) {
       setFormData({
         name: initialData.name,
         logo_url: initialData.logo_url || "",
         description: initialData.description || "",
       });
-    } else {
+    } else if (isOpen) {
       setFormData({
         name: "",
         logo_url: "",
@@ -69,8 +52,29 @@ const BrandFormModal = ({
     }
   }, [initialData, isOpen]);
 
+  // Close modal on Escape key and manage body overflow
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !isSubmitting) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, isSubmitting, onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
       const storedAuth = localStorage.getItem("user");
       if (!storedAuth) throw new Error("User not authenticated");
@@ -78,7 +82,7 @@ const BrandFormModal = ({
       const { token } = JSON.parse(storedAuth);
 
       if (isEditing && initialData) {
-        // 🛠 EDIT BRAND
+        // Edit Brand
         const response = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/updateBrand",
           {
@@ -93,7 +97,7 @@ const BrandFormModal = ({
               description: formData.description,
               logo_url: formData.logo_url,
             }),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -104,7 +108,7 @@ const BrandFormModal = ({
 
         toast.success("Brand updated successfully");
       } else {
-        // 🆕 CREATE BRAND
+        // Create Brand
         const response = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-brand",
           {
@@ -114,7 +118,7 @@ const BrandFormModal = ({
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(formData),
-          }
+          },
         );
 
         if (!response.ok) {
@@ -125,31 +129,61 @@ const BrandFormModal = ({
         toast.success("Brand created successfully");
       }
 
-
+      onClose();
+      onSubmit(formData);
     } catch (error: any) {
       console.error("Error submitting brand:", error);
       toast.error("An error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
-    // onClose();
-    // onSubmit(formData);
   };
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) onClose();
-    }}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? "Edit Brand" : "Create New Brand"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update brand information and assignments"
-              : "Create a new brand and assign administrators and nurses"}
-          </DialogDescription>
-        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isSubmitting) {
+      onClose();
+    }
+  };
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" />
+
+      {/* Modal Content */}
+      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-lg font-semibold">
+              {isEditing ? "Edit Brand" : "Create New Brand"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isEditing
+                ? "Update brand information and assignments"
+                : "Create a new brand and assign administrators and nurses"}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Brand Name</Label>
@@ -161,21 +195,31 @@ const BrandFormModal = ({
                 }
                 placeholder="Enter brand name"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="logo_url">Brand logo_url URL</Label>
+              <Label htmlFor="logo_url">Brand Logo URL</Label>
               <div className="flex gap-2">
                 <Input
                   id="logo_url"
                   value={formData.logo_url}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, logo_url: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      logo_url: e.target.value,
+                    }))
                   }
-                  placeholder="https://example.com/logo_url.png"
+                  placeholder="https://example.com/logo.png"
+                  disabled={isSubmitting}
                 />
-                <Button type="button" variant="outline" size="icon">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={isSubmitting}
+                >
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
@@ -183,33 +227,43 @@ const BrandFormModal = ({
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <div className="flex gap-2">
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                />
-                <Button type="button" variant="outline" size="icon">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Enter brand description"
+                disabled={isSubmitting}
+                rows={3}
+              />
             </div>
           </div>
 
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {isEditing ? "Update Brand" : "Create Brand"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Saving..."
+                : isEditing
+                  ? "Update Brand"
+                  : "Create Brand"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 

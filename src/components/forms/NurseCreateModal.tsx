@@ -1,15 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -62,23 +54,48 @@ const NurseCreateModal = ({
     status: "Active" as UserStatus,
     assignedBrands: [] as Brand[],
   });
-
   const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Close modal on Escape key and manage body overflow
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !isSubmitting) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, isSubmitting, onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    // Reset form
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      status: "Active",
-      assignedBrands: [],
-    });
-    setSelectedBrand("");
-    onClose();
+    setIsSubmitting(true);
+
+    try {
+      onSubmit(formData);
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        status: "Active",
+        assignedBrands: [],
+      });
+      setSelectedBrand("");
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddBrand = () => {
@@ -101,22 +118,52 @@ const NurseCreateModal = ({
     }));
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isSubmitting) {
+      onClose();
+    }
+  };
+
   const getAvailableBrands = () =>
     availableBrands.filter(
       (brand) => !formData.assignedBrands.find((b) => b.id === brand.id),
     );
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Create New Nurse</DialogTitle>
-          <DialogDescription>
-            Add a new nurse to be assigned to this campaign
-          </DialogDescription>
-        </DialogHeader>
+  if (!isOpen) {
+    return null;
+  }
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" />
+
+      {/* Modal Content */}
+      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-lg font-semibold">Create New Nurse</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a new nurse to be assigned to this campaign
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -131,6 +178,7 @@ const NurseCreateModal = ({
                 }
                 placeholder="Enter first name"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -147,6 +195,7 @@ const NurseCreateModal = ({
                 }
                 placeholder="Enter last name"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -161,6 +210,7 @@ const NurseCreateModal = ({
                 }
                 placeholder="nurse@company.com"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -178,6 +228,7 @@ const NurseCreateModal = ({
                 }
                 placeholder="Enter password"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -188,6 +239,7 @@ const NurseCreateModal = ({
                 onValueChange={(value: UserStatus) =>
                   setFormData((prev) => ({ ...prev, status: value }))
                 }
+                disabled={isSubmitting}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -203,7 +255,11 @@ const NurseCreateModal = ({
           <div className="space-y-3">
             <Label className="text-sm font-medium">Assigned Brands</Label>
             <div className="flex gap-2">
-              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+              <Select
+                value={selectedBrand}
+                onValueChange={setSelectedBrand}
+                disabled={isSubmitting}
+              >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Select a brand" />
                 </SelectTrigger>
@@ -218,7 +274,7 @@ const NurseCreateModal = ({
               <Button
                 type="button"
                 onClick={handleAddBrand}
-                disabled={!selectedBrand}
+                disabled={!selectedBrand || isSubmitting}
                 size="icon"
                 variant="outline"
               >
@@ -234,6 +290,7 @@ const NurseCreateModal = ({
                     type="button"
                     onClick={() => handleRemoveBrand(brand.id)}
                     className="hover:bg-destructive/20 rounded-full p-0.5"
+                    disabled={isSubmitting}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -247,15 +304,23 @@ const NurseCreateModal = ({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit">Create Nurse</Button>
-          </DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Nurse"}
+            </Button>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 

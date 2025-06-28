@@ -4,21 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import type { UserRole } from "@/pages/Login";
 
 export type UserStatus = "Active" | "Inactive";
@@ -105,6 +97,7 @@ const UserFormModal = ({
     role: defaultRole,
     brandId: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch brands data
   const {
@@ -118,8 +111,27 @@ const UserFormModal = ({
     enabled: isOpen, // Only fetch when modal is open
   });
 
+  // Close modal on Escape key and manage body overflow
   useEffect(() => {
-    if (initialData) {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !isSubmitting) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, isSubmitting, onClose]);
+
+  useEffect(() => {
+    if (isOpen && initialData) {
       setFormData({
         firstName: initialData.firstName,
         lastName: initialData.lastName,
@@ -128,7 +140,7 @@ const UserFormModal = ({
         role: initialData.role,
         brandId: initialData.assignedBrands[0]?.id || "",
       });
-    } else {
+    } else if (isOpen) {
       setFormData({
         firstName: "",
         lastName: "",
@@ -142,42 +154,77 @@ const UserFormModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    if (!formData.brandId) {
-      alert("Please select a brand");
-      return;
+    try {
+      if (!formData.brandId) {
+        alert("Please select a brand");
+        return;
+      }
+
+      onSubmit({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        brandId: parseInt(formData.brandId),
+      });
+      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    onSubmit({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      role: formData.role,
-      brandId: parseInt(formData.brandId),
-    });
-    onClose();
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isSubmitting) {
+      onClose();
+    }
   };
 
   const roleOptions: UserRole[] = ["admin", "nurse"];
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing
-              ? `Edit ${formData.role === "admin" ? "Administrator" : "Nurse"}`
-              : `Add New ${defaultRole === "admin" ? "Administrator" : "Nurse"}`}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update user information and brand assignment"
-              : `Create a new ${defaultRole === "admin" ? "administrator" : "nurse"} account`}
-          </DialogDescription>
-        </DialogHeader>
+  if (!isOpen) {
+    return null;
+  }
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80" />
+
+      {/* Modal Content */}
+      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-lg font-semibold">
+              {isEditing
+                ? `Edit ${formData.role === "admin" ? "Administrator" : "Nurse"}`
+                : `Add New ${defaultRole === "admin" ? "Administrator" : "Nurse"}`}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isEditing
+                ? "Update user information and brand assignment"
+                : `Create a new ${defaultRole === "admin" ? "administrator" : "nurse"} account`}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -192,6 +239,7 @@ const UserFormModal = ({
                 }
                 placeholder="Enter first name"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -208,6 +256,7 @@ const UserFormModal = ({
                 }
                 placeholder="Enter last name"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -223,6 +272,7 @@ const UserFormModal = ({
               }
               placeholder="user@company.com"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -240,6 +290,7 @@ const UserFormModal = ({
               }
               placeholder="Enter password"
               required
+              disabled={isSubmitting}
             />
           </div>
 
@@ -250,6 +301,7 @@ const UserFormModal = ({
               onValueChange={(value: UserRole) =>
                 setFormData((prev) => ({ ...prev, role: value }))
               }
+              disabled={isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
@@ -271,6 +323,7 @@ const UserFormModal = ({
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, brandId: value }))
               }
+              disabled={isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue
@@ -306,19 +359,27 @@ const UserFormModal = ({
             </Select>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          {/* Footer */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={brandsLoading}>
-              {isEditing
-                ? `Update ${formData.role === "admin" ? "Administrator" : "Nurse"}`
-                : `Create ${defaultRole === "admin" ? "Administrator" : "Nurse"}`}
+            <Button type="submit" disabled={brandsLoading || isSubmitting}>
+              {isSubmitting
+                ? "Saving..."
+                : isEditing
+                  ? `Update ${formData.role === "admin" ? "Administrator" : "Nurse"}`
+                  : `Create ${defaultRole === "admin" ? "Administrator" : "Nurse"}`}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 

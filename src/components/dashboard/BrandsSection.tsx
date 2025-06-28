@@ -35,6 +35,7 @@ import {
   Loader2,
 } from "lucide-react";
 import BrandFormModal from "@/components/forms/BrandFormModal";
+import AdminAssignmentModal from "@/components/forms/AdminAssignmentModal";
 import { toast } from "sonner";
 
 interface BrandApiData {
@@ -139,6 +140,9 @@ const fetchNurses = async (): Promise<NurseApiData[]> => {
 const BrandsSection = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedBrandForAdmin, setSelectedBrandForAdmin] =
+    useState<Brand | null>(null);
 
   // Fetch brands data
   const {
@@ -209,6 +213,20 @@ const BrandsSection = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingBrand(null);
+  };
+
+  const openAdminModal = (brand: Brand) => {
+    setSelectedBrandForAdmin(brand);
+    setIsAdminModalOpen(true);
+  };
+
+  const closeAdminModal = () => {
+    setIsAdminModalOpen(false);
+    setSelectedBrandForAdmin(null);
+  };
+
+  const handleAdminAssignmentSuccess = () => {
+    refetchBrands();
   };
 
   if (brandsLoading) {
@@ -392,7 +410,9 @@ const BrandsSection = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openAdminModal(brand)}
+                          >
                             <Users className="mr-2 h-4 w-4" />
                             Assign Admin
                           </DropdownMenuItem>
@@ -427,6 +447,18 @@ const BrandsSection = () => {
         initialData={editingBrand}
         isEditing={!!editingBrand}
       />
+
+      {/* Admin Assignment Modal */}
+      {selectedBrandForAdmin && (
+        <AdminAssignmentModal
+          isOpen={isAdminModalOpen}
+          onClose={closeAdminModal}
+          onSuccess={handleAdminAssignmentSuccess}
+          brandId={Number(selectedBrandForAdmin.id)}
+          brandName={selectedBrandForAdmin.name}
+          currentAdmins={selectedBrandForAdmin.assignedAdmins}
+        />
+      )}
     </div>
   );
 };
