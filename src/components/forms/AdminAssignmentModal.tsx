@@ -122,20 +122,15 @@ const AdminAssignmentModal = ({
     enabled: isOpen,
   });
 
-  // Initialize selected admins with currently assigned admins
+  // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen && currentAdmins) {
       setSelectedAdminIds(currentAdmins.map((admin) => admin.user_id));
-    }
-  }, [isOpen, currentAdmins]);
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
+    } else {
       setSelectedAdminIds([]);
       setIsSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, currentAdmins]);
 
   const handleAdminToggle = (adminId: number) => {
     setSelectedAdminIds((prev) => {
@@ -174,15 +169,12 @@ const AdminAssignmentModal = ({
     adminsData?.filter((admin) => !selectedAdminIds.includes(admin.user_id)) ||
     [];
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open && !isSubmitting) {
-          onClose();
-        }
-      }}
-    >
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -243,6 +235,7 @@ const AdminAssignmentModal = ({
               <Select
                 onValueChange={(value) => handleAdminToggle(Number(value))}
                 disabled={isSubmitting}
+                key={selectedAdminIds.length} // Force re-render to clear selection
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select an admin to add" />
