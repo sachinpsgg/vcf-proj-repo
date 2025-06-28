@@ -292,7 +292,7 @@ const AdminAssignmentModal = ({
           <Button
             type="button"
             variant="outline"
-            onClick={handleClose}
+            onClick={onClose}
             disabled={isSubmitting}
           >
             Cancel
