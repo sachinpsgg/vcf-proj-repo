@@ -41,6 +41,7 @@ import {
   Upload,
   Loader2,
   User,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
