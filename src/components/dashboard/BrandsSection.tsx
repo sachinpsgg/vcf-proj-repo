@@ -410,7 +410,9 @@ const BrandsSection = () => {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => openAdminModal(brand)}
+                          >
                             <Users className="mr-2 h-4 w-4" />
                             Assign Admin
                           </DropdownMenuItem>
