@@ -166,12 +166,6 @@ const AdminAssignmentModal = ({
     }
   };
 
-  const handleClose = () => {
-    if (!isSubmitting) {
-      onClose();
-    }
-  };
-
   const selectedAdmins =
     adminsData?.filter((admin) => selectedAdminIds.includes(admin.user_id)) ||
     [];
@@ -184,7 +178,9 @@ const AdminAssignmentModal = ({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (!open) handleClose();
+        if (!open && !isSubmitting) {
+          onClose();
+        }
       }}
     >
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
