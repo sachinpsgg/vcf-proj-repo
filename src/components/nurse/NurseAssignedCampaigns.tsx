@@ -233,6 +233,16 @@ END:VCARD`;
     toast.success("URL copied to clipboard!");
   };
 
+  const handleDownloadVCF = (url: GeneratedURL) => {
+    const link = document.createElement("a");
+    link.href = url.vcfUrl;
+    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("VCF card downloaded!");
+  };
+
   const openUrlModal = (campaign: NurseCampaignApiData) => {
     setSelectedCampaign(campaign);
     setIsUrlModalOpen(true);
