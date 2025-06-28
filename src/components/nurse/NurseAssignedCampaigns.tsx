@@ -41,6 +41,7 @@ import {
   Upload,
   Loader2,
   User,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -230,6 +231,16 @@ END:VCARD`;
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
     toast.success("URL copied to clipboard!");
+  };
+
+  const handleDownloadVCF = (url: GeneratedURL) => {
+    const link = document.createElement("a");
+    link.href = url.vcfUrl;
+    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("VCF card downloaded!");
   };
 
   const openUrlModal = (campaign: NurseCampaignApiData) => {
@@ -446,7 +457,6 @@ END:VCARD`;
                       onClick={() => openUrlModal(campaign)}
                       size="sm"
                       className="gap-2"
-                      disabled={campaign.campaignStatus !== "active"}
                     >
                       <Link className="w-4 h-4" />
                       Generate URL
@@ -534,17 +544,24 @@ END:VCARD`;
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        onClick={() =>
-                          window.open(urlData.patientUrl, "_blank")
-                        }
-                        size="sm"
-                        variant="outline"
-                        className="gap-2"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Open
-                      </Button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          onClick={() => handleDownloadVCF(urlData)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            window.open(urlData.patientUrl, "_blank")
+                          }
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
