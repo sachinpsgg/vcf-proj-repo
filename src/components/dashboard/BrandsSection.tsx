@@ -35,6 +35,7 @@ import {
   Loader2,
 } from "lucide-react";
 import BrandFormModal from "@/components/forms/BrandFormModal";
+import AdminAssignmentModal from "@/components/forms/AdminAssignmentModal";
 import { toast } from "sonner";
 
 interface BrandApiData {
