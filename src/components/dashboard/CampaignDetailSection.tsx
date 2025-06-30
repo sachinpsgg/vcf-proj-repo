@@ -84,7 +84,6 @@ const fetchCampaignById = async (
 
   // Extract numeric ID from campaign-{id} format
   const numericId = campaignId.replace("campaign-", "");
-
   const response = await fetch(
     `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/getById?campaign_id=${numericId}`,
     {
@@ -99,7 +98,8 @@ const fetchCampaignById = async (
   }
 
   const data = await response.json();
-  return data.campaigns[0]; // API returns campaigns array with single item
+  console.log(data);
+  return data.campaign;
 };
 
 const fetchCampaignNurses = async (
@@ -127,6 +127,7 @@ const fetchCampaignNurses = async (
   }
 
   const data = await response.json();
+  console.log(data);
   return data.nurses || [];
 };
 
@@ -147,6 +148,7 @@ const CampaignDetailSection = ({
     queryKey: ["campaign", campaignId],
     queryFn: () => fetchCampaignById(campaignId),
     staleTime: 30000,
+
   });
 
   // Fetch campaign nurses
