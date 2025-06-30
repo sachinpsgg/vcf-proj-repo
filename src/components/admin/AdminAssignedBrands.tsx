@@ -28,12 +28,6 @@ interface BrandApiData {
   created_by: number;
   created_at: string;
   updated_at: string;
-  assigned_admins: Array<{
-    user_id: number;
-    email: string;
-    first_name: string;
-    last_name: string;
-  }>;
 }
 
 interface AssignedBrand {
