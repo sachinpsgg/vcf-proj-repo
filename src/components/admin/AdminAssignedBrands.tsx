@@ -126,11 +126,9 @@ const AdminAssignedBrands = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            My Assigned Brands
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground">All Brands</h1>
           <p className="text-muted-foreground mt-1">
-            Brands you are assigned to manage as an administrator
+            All available brands in the system
           </p>
         </div>
       </div>
