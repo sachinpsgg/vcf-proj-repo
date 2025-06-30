@@ -107,7 +107,7 @@ const fetchCampaignById = async (
   const { token } = JSON.parse(storedAuth);
 
   const response = await fetch(
-    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaigns/${campaignId}`,
+    `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/getById?campaign_id=${campaignId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -120,6 +120,7 @@ const fetchCampaignById = async (
   }
 
   const data = await response.json();
+  console.log(data)
   return data.campaign;
 };
 
@@ -143,6 +144,7 @@ const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
   }
 
   const data = await response.json();
+  console.log(data)
   return data.brand;
 };
 

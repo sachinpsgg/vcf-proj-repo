@@ -178,6 +178,7 @@ const DashboardLayout = ({
         );
 
         const data = await res.json();
+        console.log(data)
         const mappedCampaigns = data.campaigns.map((c: any) => ({
           label: c.campaign_name,
           id: `campaign-${c.campaign_id}`,

@@ -112,6 +112,7 @@ const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
   }
 
   const data = await response.json();
+  console.log(data)
   return data.campaigns || [];
 };
 
@@ -135,6 +136,7 @@ const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
   }
 
   const data = await response.json();
+  console.log(data)
   return data.brand;
 };
 
