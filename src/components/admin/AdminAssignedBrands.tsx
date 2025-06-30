@@ -328,8 +328,7 @@ const AdminAssignedBrands = () => {
                 </h4>
                 <ul className="text-blue-800 text-sm space-y-1">
                   <li>
-                    • You can create and manage campaigns for your assigned
-                    brands
+                    • You can create and manage campaigns for available brands
                   </li>
                   <li>
                     • Production campaigns cannot be edited once published
