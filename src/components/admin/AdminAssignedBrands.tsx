@@ -314,9 +314,9 @@ const AdminAssignedBrands = () => {
       {/* Guidelines */}
       <Card>
         <CardHeader>
-          <CardTitle>Administrator Guidelines</CardTitle>
+          <CardTitle>Brand Management Guidelines</CardTitle>
           <CardDescription>
-            Important guidelines for managing your assigned brands
+            Important guidelines for managing brands in the system
           </CardDescription>
         </CardHeader>
         <CardContent>
