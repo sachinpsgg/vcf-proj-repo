@@ -207,11 +207,10 @@ const AdminAssignedBrands = () => {
               <CardContent className="text-center py-8">
                 <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                  No Assigned Brands
+                  No Brands Found
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  You haven't been assigned to any brands yet. Contact your
-                  super admin for brand assignments.
+                  No brands are currently available in the system.
                 </p>
               </CardContent>
             </Card>
