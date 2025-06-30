@@ -1,4 +1,4 @@
-  import { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import {
   Loader2,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
+import NurseAssignmentModal from "@/components/forms/NurseAssignmentModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
 import { toast } from "sonner";
 
@@ -137,6 +138,8 @@ const CampaignDetailSection = ({
 }: CampaignDetailSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isNurseAssignmentModalOpen, setIsNurseAssignmentModalOpen] =
+    useState(false);
 
   // Fetch campaign data
   const {
@@ -148,7 +151,6 @@ const CampaignDetailSection = ({
     queryKey: ["campaign", campaignId],
     queryFn: () => fetchCampaignById(campaignId),
     staleTime: 30000,
-
   });
 
   // Fetch campaign nurses
@@ -324,6 +326,14 @@ const CampaignDetailSection = ({
           <Button onClick={openCreateModal} variant="outline" className="gap-2">
             <Plus className="w-4 h-4" />
             Create New Campaign
+          </Button>
+          <Button
+            onClick={() => setIsNurseAssignmentModalOpen(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Assign Nurse
           </Button>
           <Button
             onClick={openEditModal}
@@ -518,6 +528,27 @@ const CampaignDetailSection = ({
           isEditing && campaign ? formatCampaignForEdit(campaign) : null
         }
         isEditing={isEditing}
+      />
+
+      {/* Nurse Assignment Modal */}
+      <NurseAssignmentModal
+        isOpen={isNurseAssignmentModalOpen}
+        onClose={() => setIsNurseAssignmentModalOpen(false)}
+        onSuccess={() => {
+          refetchNurses();
+          toast.success("Nurse assignment updated successfully");
+        }}
+        campaignId={campaign ? campaign.campaign_id : 0}
+        campaignName={campaign ? campaign.campaign_name : ""}
+        brandId={campaign ? campaign.brand_id : 0}
+        currentNurses={
+          nurses?.map((nurse) => ({
+            user_id: nurse.user_id,
+            email: nurse.email,
+            first_name: nurse.first_name,
+            last_name: nurse.last_name,
+          })) || []
+        }
       />
     </div>
   );
