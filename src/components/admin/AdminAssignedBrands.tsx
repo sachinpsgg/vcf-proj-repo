@@ -68,10 +68,6 @@ const fetchBrands = async (): Promise<BrandApiData[]> => {
 };
 
 const AdminAssignedBrands = () => {
-  // Get current user info
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const currentUserId = currentUser.user_id;
-
   // Fetch brands data
   const {
     data: brandsData,
@@ -84,25 +80,21 @@ const AdminAssignedBrands = () => {
     staleTime: 30000,
   });
 
-  // Filter brands assigned to current admin and transform data
+  // Transform all brands data without filtering
   const assignedBrands: AssignedBrand[] =
-    brandsData
-      ?.filter((brand) =>
-        brand.assigned_admins.some((admin) => admin.user_id === currentUserId),
-      )
-      .map((b) => ({
-        id: String(b.brand_id),
-        name: b.brand_name,
-        logo: b.logo_url,
-        description: b.description,
-        contactEmail:
-          "contact@" + b.brand_name.toLowerCase().replace(/\s+/g, "") + ".com",
-        contactPhone: "+1 (555) 123-4567", // Default phone since not in API
-        assignedDate: new Date(b.created_at),
-        totalCampaigns: 0, // TODO: Get from campaigns API
-        activeCampaigns: 0, // TODO: Get from campaigns API
-        assignedNurses: 0, // TODO: Get from nurses API
-      })) || [];
+    brandsData?.map((b) => ({
+      id: String(b.brand_id),
+      name: b.brand_name,
+      logo: b.logo_url,
+      description: b.description,
+      contactEmail:
+        "contact@" + b.brand_name.toLowerCase().replace(/\s+/g, "") + ".com",
+      contactPhone: "+1 (555) 123-4567", // Default phone since not in API
+      assignedDate: new Date(b.created_at),
+      totalCampaigns: 0, // TODO: Get from campaigns API
+      activeCampaigns: 0, // TODO: Get from campaigns API
+      assignedNurses: 0, // TODO: Get from nurses API
+    })) || [];
 
   if (brandsLoading) {
     return (
