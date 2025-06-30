@@ -7,17 +7,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building2,
-  Calendar,
-  Users,
-  Megaphone,
-  Phone,
-  Mail,
-  Loader2,
-} from "lucide-react";
+import { Building2, Users, UserPlus, Loader2 } from "lucide-react";
 
 interface BrandApiData {
   brand_id: number;
@@ -28,28 +28,18 @@ interface BrandApiData {
   created_by: number;
   created_at: string;
   updated_at: string;
-  assigned_admins: Array<{
-    user_id: number;
-    email: string;
-    first_name: string;
-    last_name: string;
-  }>;
 }
 
-interface AssignedBrand {
+interface Brand {
   id: string;
   name: string;
   logo?: string;
-  description: string;
-  contactEmail: string;
-  contactPhone: string;
-  assignedDate: Date;
-  totalCampaigns: number;
-  activeCampaigns: number;
-  assignedNurses: number;
+  description?: string;
+  status: string;
+  createdAt: Date;
 }
 
-// Fetch function for brands (same as BrandsSection)
+// Fetch function for brands
 const fetchBrands = async (): Promise<BrandApiData[]> => {
   const storedAuth = localStorage.getItem("user");
   if (!storedAuth) throw new Error("User not authenticated");
@@ -74,10 +64,6 @@ const fetchBrands = async (): Promise<BrandApiData[]> => {
 };
 
 const AdminAssignedBrands = () => {
-  // Get current user info
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const currentUserId = currentUser.user_id;
-
   // Fetch brands data
   const {
     data: brandsData,
@@ -90,31 +76,27 @@ const AdminAssignedBrands = () => {
     staleTime: 30000,
   });
 
-  // Filter brands assigned to current admin and transform data
-  const assignedBrands: AssignedBrand[] =
-    brandsData
-      ?.filter((brand) =>
-        brand.assigned_admins.some((admin) => admin.user_id === currentUserId),
-      )
-      .map((b) => ({
-        id: String(b.brand_id),
-        name: b.brand_name,
-        logo: b.logo_url,
-        description: b.description,
-        contactEmail:
-          "contact@" + b.brand_name.toLowerCase().replace(/\s+/g, "") + ".com",
-        contactPhone: "+1 (555) 123-4567", // Default phone since not in API
-        assignedDate: new Date(b.created_at),
-        totalCampaigns: 0, // TODO: Get from campaigns API
-        activeCampaigns: 0, // TODO: Get from campaigns API
-        assignedNurses: 0, // TODO: Get from nurses API
-      })) || [];
+  // Transform all brands data without filtering
+  const brands: Brand[] =
+    brandsData?.map((b) => ({
+      id: String(b.brand_id),
+      name: b.brand_name,
+      logo: b.logo_url,
+      description: b.description,
+      status: b.brandStatus,
+      createdAt: new Date(b.created_at),
+    })) || [];
+
+  // Calculate stats
+  const activeBrands = brands.filter(
+    (brand) => brand.status === "active",
+  ).length;
 
   if (brandsLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin" />
-        <span className="ml-2">Loading assigned brands...</span>
+        <span className="ml-2">Loading brands...</span>
       </div>
     );
   }
@@ -140,239 +122,127 @@ const AdminAssignedBrands = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            My Assigned Brands
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground">All Brands</h1>
           <p className="text-muted-foreground mt-1">
-            Brands you are assigned to manage as an administrator
+            All available brands in the system
           </p>
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Brands</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{brands.length}</div>
+            <p className="text-xs text-muted-foreground">All brand accounts</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Brands</CardTitle>
+            <Building2 className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeBrands}</div>
+            <p className="text-xs text-muted-foreground">Currently active</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Assigned Brands
+              Inactive Brands
             </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{assignedBrands.length}</div>
-            <p className="text-xs text-muted-foreground">Total brands</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Campaigns
-            </CardTitle>
-            <Megaphone className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
             <div className="text-2xl font-bold">
-              {assignedBrands.reduce(
-                (acc, brand) => acc + brand.totalCampaigns,
-                0,
-              )}
+              {brands.length - activeBrands}
             </div>
-            <p className="text-xs text-muted-foreground">All campaigns</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Campaigns
-            </CardTitle>
-            <Megaphone className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {assignedBrands.reduce(
-                (acc, brand) => acc + brand.activeCampaigns,
-                0,
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">Currently running</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Nurses</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {assignedBrands.reduce(
-                (acc, brand) => acc + brand.assignedNurses,
-                0,
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">Across all brands</p>
+            <p className="text-xs text-muted-foreground">Not active</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Brands List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {assignedBrands.length === 0 ? (
-          <div className="col-span-full">
-            <Card>
-              <CardContent className="text-center py-8">
-                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                  No Assigned Brands
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  You haven't been assigned to any brands yet. Contact your
-                  super admin for brand assignments.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          assignedBrands.map((brand) => (
-            <Card key={brand.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start space-x-4">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={brand.logo} alt={brand.name} />
-                    <AvatarFallback className="text-lg">
-                      {brand.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-xl truncate">
-                      {brand.name}
-                    </CardTitle>
-                    <CardDescription className="text-sm mt-1">
-                      {brand.description}
-                    </CardDescription>
-                    <div className="flex items-center space-x-2 mt-3">
-                      <Badge variant="outline" className="gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {brand.assignedDate.toLocaleDateString()}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {brand.totalCampaigns}
-                    </div>
-                    <div className="text-xs text-blue-600">Total Campaigns</div>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {brand.activeCampaigns}
-                    </div>
-                    <div className="text-xs text-green-600">Active</div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Mail className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-muted-foreground">
-                        Email
-                      </div>
-                      <div className="text-sm font-mono truncate">
-                        {brand.contactEmail}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Phone className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-muted-foreground">
-                        Phone
-                      </div>
-                      <div className="text-sm font-mono">
-                        {brand.contactPhone}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Users className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-muted-foreground">
-                        Team
-                      </div>
-                      <div className="text-sm">
-                        {brand.assignedNurses} nurses assigned
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Guidelines */}
+      {/* Brands Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Administrator Guidelines</CardTitle>
+          <CardTitle>All Brands</CardTitle>
           <CardDescription>
-            Important guidelines for managing your assigned brands
+            View all brand accounts and their information
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2">
-                  Campaign Management
-                </h4>
-                <ul className="text-blue-800 text-sm space-y-1">
-                  <li>
-                    • You can create and manage campaigns for your assigned
-                    brands
-                  </li>
-                  <li>
-                    • Production campaigns cannot be edited once published
-                  </li>
-                  <li>
-                    • Ensure all campaign details are accurate before publishing
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <h4 className="font-semibold text-green-900 mb-2">
-                  Team Management
-                </h4>
-                <ul className="text-green-800 text-sm space-y-1">
-                  <li>• You can create and manage nurses for your brands</li>
-                  <li>• Assign nurses to appropriate campaigns</li>
-                  <li>• Monitor nurse performance and provide support</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Brand</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {brands.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={3}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    No brands found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                brands.map((brand) => (
+                  <TableRow key={brand.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={brand.logo} alt={brand.name} />
+                          <AvatarFallback>
+                            {brand.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{brand.name}</div>
+                          {brand.description && (
+                            <div className="text-sm text-muted-foreground">
+                              {brand.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          brand.status === "active" ? "default" : "secondary"
+                        }
+                        className={
+                          brand.status === "active"
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : ""
+                        }
+                      >
+                        {brand.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {brand.createdAt.toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
