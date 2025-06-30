@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,7 +16,25 @@ import {
   Megaphone,
   Phone,
   Mail,
+  Loader2,
 } from "lucide-react";
+
+interface BrandApiData {
+  brand_id: number;
+  brand_name: string;
+  logo_url: string;
+  description: string;
+  brandStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  assigned_admins: Array<{
+    user_id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+  }>;
+}
 
 interface AssignedBrand {
   id: string;
@@ -29,34 +49,91 @@ interface AssignedBrand {
   assignedNurses: number;
 }
 
+// Fetch function for brands (same as BrandsSection)
+const fetchBrands = async (): Promise<BrandApiData[]> => {
+  const storedAuth = localStorage.getItem("user");
+  if (!storedAuth) throw new Error("User not authenticated");
+
+  const { token } = JSON.parse(storedAuth);
+
+  const response = await fetch(
+    "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-brands",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch brands");
+  }
+
+  const data = await response.json();
+  return data.brands || [];
+};
+
 const AdminAssignedBrands = () => {
-  const assignedBrands: AssignedBrand[] = [
-    {
-      id: "1",
-      name: "HealthTech Solutions",
-      logo: "/api/placeholder/60/60",
-      description:
-        "Leading healthcare technology company focused on innovative medical solutions.",
-      contactEmail: "contact@healthtech.com",
-      contactPhone: "+1 (555) 123-4567",
-      assignedDate: new Date("2024-01-15"),
-      totalCampaigns: 8,
-      activeCampaigns: 3,
-      assignedNurses: 12,
-    },
-    {
-      id: "2",
-      name: "MedCare Plus",
-      description:
-        "Comprehensive healthcare services provider with a focus on patient care excellence.",
-      contactEmail: "admin@medcareplus.com",
-      contactPhone: "+1 (555) 987-6543",
-      assignedDate: new Date("2024-02-20"),
-      totalCampaigns: 5,
-      activeCampaigns: 2,
-      assignedNurses: 8,
-    },
-  ];
+  // Get current user info
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUserId = currentUser.user_id;
+
+  // Fetch brands data
+  const {
+    data: brandsData,
+    isLoading: brandsLoading,
+    error: brandsError,
+    refetch: refetchBrands,
+  } = useQuery({
+    queryKey: ["brands"],
+    queryFn: fetchBrands,
+    staleTime: 30000,
+  });
+
+  // Filter brands assigned to current admin and transform data
+  const assignedBrands: AssignedBrand[] =
+    brandsData
+      ?.filter((brand) =>
+        brand.assigned_admins.some((admin) => admin.user_id === currentUserId),
+      )
+      .map((b) => ({
+        id: String(b.brand_id),
+        name: b.brand_name,
+        logo: b.logo_url,
+        description: b.description,
+        contactEmail:
+          "contact@" + b.brand_name.toLowerCase().replace(/\s+/g, "") + ".com",
+        contactPhone: "+1 (555) 123-4567", // Default phone since not in API
+        assignedDate: new Date(b.created_at),
+        totalCampaigns: 0, // TODO: Get from campaigns API
+        activeCampaigns: 0, // TODO: Get from campaigns API
+        assignedNurses: 0, // TODO: Get from nurses API
+      })) || [];
+
+  if (brandsLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-2">Loading assigned brands...</span>
+      </div>
+    );
+  }
+
+  if (brandsError) {
+    return (
+      <div className="flex items-center justify-center py-8 text-red-500">
+        <span>Error loading brands: {brandsError.message}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-2"
+          onClick={() => refetchBrands()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -142,98 +219,115 @@ const AdminAssignedBrands = () => {
 
       {/* Brands List */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {assignedBrands.map((brand) => (
-          <Card key={brand.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-start space-x-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={brand.logo} alt={brand.name} />
-                  <AvatarFallback className="text-lg">
-                    {brand.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-xl truncate">
-                    {brand.name}
-                  </CardTitle>
-                  <CardDescription className="text-sm mt-1">
-                    {brand.description}
-                  </CardDescription>
-                  <div className="flex items-center space-x-2 mt-3">
-                    <Badge variant="outline" className="gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {brand.assignedDate.toLocaleDateString()}
-                    </Badge>
+        {assignedBrands.length === 0 ? (
+          <div className="col-span-full">
+            <Card>
+              <CardContent className="text-center py-8">
+                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                  No Assigned Brands
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  You haven't been assigned to any brands yet. Contact your
+                  super admin for brand assignments.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          assignedBrands.map((brand) => (
+            <Card key={brand.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start space-x-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={brand.logo} alt={brand.name} />
+                    <AvatarFallback className="text-lg">
+                      {brand.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-xl truncate">
+                      {brand.name}
+                    </CardTitle>
+                    <CardDescription className="text-sm mt-1">
+                      {brand.description}
+                    </CardDescription>
+                    <div className="flex items-center space-x-2 mt-3">
+                      <Badge variant="outline" className="gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {brand.assignedDate.toLocaleDateString()}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {brand.totalCampaigns}
-                  </div>
-                  <div className="text-xs text-blue-600">Total Campaigns</div>
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {brand.activeCampaigns}
-                  </div>
-                  <div className="text-xs text-green-600">Active</div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Mail className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-muted-foreground">
-                      Email
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {brand.totalCampaigns}
                     </div>
-                    <div className="text-sm font-mono truncate">
-                      {brand.contactEmail}
-                    </div>
+                    <div className="text-xs text-blue-600">Total Campaigns</div>
                   </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Phone className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-muted-foreground">
-                      Phone
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {brand.activeCampaigns}
                     </div>
-                    <div className="text-sm font-mono">
-                      {brand.contactPhone}
-                    </div>
+                    <div className="text-xs text-green-600">Active</div>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-muted-foreground">
-                      Team
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Mail className="w-4 h-4 text-blue-600" />
                     </div>
-                    <div className="text-sm">
-                      {brand.assignedNurses} nurses assigned
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Email
+                      </div>
+                      <div className="text-sm font-mono truncate">
+                        {brand.contactEmail}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Phone className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Phone
+                      </div>
+                      <div className="text-sm font-mono">
+                        {brand.contactPhone}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        Team
+                      </div>
+                      <div className="text-sm">
+                        {brand.assignedNurses} nurses assigned
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Guidelines */}
