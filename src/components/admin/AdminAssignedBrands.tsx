@@ -346,7 +346,7 @@ const AdminAssignedBrands = () => {
                   Team Management
                 </h4>
                 <ul className="text-green-800 text-sm space-y-1">
-                  <li>• You can create and manage nurses for your brands</li>
+                  <li>• You can create and manage nurses for brands</li>
                   <li>• Assign nurses to appropriate campaigns</li>
                   <li>• Monitor nurse performance and provide support</li>
                 </ul>
