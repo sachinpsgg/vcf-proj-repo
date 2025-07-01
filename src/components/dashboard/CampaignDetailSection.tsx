@@ -240,6 +240,44 @@ const CampaignDetailSection = ({
     );
   };
 
+  const handlePublishCampaign = async () => {
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+
+      // Extract numeric ID from campaign-{id} format
+      const numericId = campaignId.replace("campaign-", "");
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/publish",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            campaign_id: parseInt(numericId, 10),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to publish campaign");
+      }
+
+      toast.success("Campaign published successfully");
+      setIsPublishWarningOpen(false);
+      refetchCampaign();
+    } catch (error: any) {
+      console.error("Error publishing campaign:", error);
+      toast.error(error.message || "Failed to publish campaign");
+    }
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
       case "active":
