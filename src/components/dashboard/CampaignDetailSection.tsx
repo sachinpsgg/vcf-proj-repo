@@ -362,55 +362,7 @@ const CampaignDetailSection = ({
       )}
 
       {/* Status Badge */}
-      <div className="flex items-center justify-between">
-        <Badge
-          variant={getStatusBadgeVariant(campaign.campaignStatus)}
-          className="text-sm px-3 py-1 font-medium"
-        >
-          {campaign.campaignStatus.toUpperCase()}
-        </Badge>
 
-        {/* Actions Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <MoreHorizontal className="h-4 w-4" />
-              Actions
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={openCreateModal}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Campaign
-            </DropdownMenuItem>
-
-            {(campaign.campaignStatus?.toLowerCase() === "draft" ||
-              campaign.campaignStatus?.toLowerCase() === "uat") && (
-              <DropdownMenuItem onClick={openEditModal}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Campaign
-              </DropdownMenuItem>
-            )}
-
-            {campaign.campaignStatus?.toLowerCase() === "uat" && (
-              <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
-                <Send className="mr-2 h-4 w-4" />
-                Publish to Production
-              </DropdownMenuItem>
-            )}
-
-            {campaign.campaignStatus?.toLowerCase() === "prod" && (
-              <DropdownMenuItem
-                onClick={handleToggleStatus}
-                className="text-destructive"
-              >
-                <PowerOff className="mr-2 h-4 w-4" />
-                Deactivate Campaign
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
       {/* Campaign Header */}
       <div className="flex items-start space-x-4">
@@ -443,6 +395,56 @@ const CampaignDetailSection = ({
               </div>
             )}
           </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <Badge
+            variant={getStatusBadgeVariant(campaign.campaignStatus)}
+            className="text-sm px-3 py-1 font-medium"
+          >
+            {campaign.campaignStatus.toUpperCase()}
+          </Badge>
+          <div className="flex items-center justify-center min-w-[40px] ml-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <MoreHorizontal className="h-4 w-4" />
+                  Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={openCreateModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create New Campaign
+                </DropdownMenuItem>
+
+                {(campaign.campaignStatus?.toLowerCase() === "draft" ||
+                  campaign.campaignStatus?.toLowerCase() === "uat") && (
+                  <DropdownMenuItem onClick={openEditModal}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Campaign
+                  </DropdownMenuItem>
+                )}
+
+                {campaign.campaignStatus?.toLowerCase() === "uat" && (
+                  <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Publish to Production
+                  </DropdownMenuItem>
+                )}
+
+                {campaign.campaignStatus?.toLowerCase() === "prod" && (
+                  <DropdownMenuItem
+                    onClick={handleToggleStatus}
+                    className="text-destructive"
+                  >
+                    <PowerOff className="mr-2 h-4 w-4" />
+                    Deactivate Campaign
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
         </div>
       </div>
 

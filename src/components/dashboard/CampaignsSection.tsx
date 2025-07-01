@@ -311,61 +311,6 @@ const CampaignsSection = ({
           Create Campaign
         </Button>
       </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-muted-foreground">
-            Filter by Brand:
-          </label>
-          <Select value={brandFilter} onValueChange={setBrandFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select brand" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Brands</SelectItem>
-              {uniqueBrands.map((brand) => (
-                <SelectItem key={brand} value={brand}>
-                  {brand}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-muted-foreground">
-            Filter by Status:
-          </label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="uat">UAT</SelectItem>
-              <SelectItem value="prod">Prod</SelectItem>
-              <SelectItem value="deactivated">Deactivated</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {(brandFilter !== "all" || statusFilter !== "all") && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setBrandFilter("all");
-              setStatusFilter("all");
-            }}
-            className="gap-2"
-          >
-            Clear Filters
-          </Button>
-        )}
-      </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
@@ -397,13 +342,13 @@ const CampaignsSection = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Production Ready
+              Patient URL Generated
             </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{prodCount}</div>
-            <p className="text-xs text-muted-foreground">Live campaigns</p>
+            <p className="text-xs text-muted-foreground">Total URL Generated so far</p>
           </CardContent>
         </Card>
 
@@ -425,19 +370,73 @@ const CampaignsSection = ({
 
       {/* Campaigns Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>
-            {brandFilter === "all" && statusFilter === "all"
-              ? "All Campaigns"
-              : "Filtered Campaigns"}
-          </CardTitle>
-          <CardDescription>
-            {brandFilter === "all" && statusFilter === "all"
-              ? "View and manage all campaigns, their status, and nurse assignments"
-              : `Showing ${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}
+        <CardHeader className="flex flex-row justify-between items-center">
+          <div className="">
+            <CardTitle>
+              {brandFilter === "all" && statusFilter === "all"
+                ? "All Campaigns"
+                : "Filtered Campaigns"}
+            </CardTitle>
+            <CardDescription>
+              {brandFilter === "all" && statusFilter === "all"
+                ? "View and manage all campaigns, their status, and nurse assignments"
+                : `Showing ${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}
                  ${brandFilter !== "all" ? `for ${brandFilter}` : ""}
                  ${statusFilter !== "all" ? `with status: ${statusFilter.toUpperCase()}` : ""}`}
-          </CardDescription>
+            </CardDescription>
+          </div>
+          <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Filter by Brand:
+              </label>
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {uniqueBrands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Filter by Status:
+              </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="uat">UAT</SelectItem>
+                  <SelectItem value="prod">Prod</SelectItem>
+                  <SelectItem value="deactivated">Deactivated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(brandFilter !== "all" || statusFilter !== "all") && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBrandFilter("all");
+                  setStatusFilter("all");
+                }}
+                className="gap-2"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -445,9 +444,10 @@ const CampaignsSection = ({
               <TableRow>
                 <TableHead>Campaign</TableHead>
                 <TableHead>Brand</TableHead>
+                <TableHead>Total vcf</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Assigned Nurses</TableHead>
+                <TableHead>Total Nurses</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-center">Edit</TableHead>
                 <TableHead className="text-center">Details</TableHead>
@@ -491,6 +491,9 @@ const CampaignsSection = ({
                     <TableCell className="font-medium">
                       {campaign.brandName}
                     </TableCell>
+                    <TableCell className="font-medium justify-center text-center">
+                      232
+                    </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(campaign.status)}>
                         {campaign.status}
@@ -500,18 +503,8 @@ const CampaignsSection = ({
                       {campaign.phoneNumber}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {campaign.assignedNurses.length > 0 ? (
-                          campaign.assignedNurses.map((nurse) => (
-                            <Badge key={nurse.id} variant="outline">
-                              {nurse.name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            No nurses assigned
-                          </span>
-                        )}
+                      <div className="flex flex-wrap gap-1 text-center">
+                        {campaign.assignedNurses.length}
                       </div>
                     </TableCell>
                     <TableCell>
