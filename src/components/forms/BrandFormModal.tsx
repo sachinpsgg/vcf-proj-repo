@@ -173,7 +173,7 @@ const BrandFormModal = ({
         toast.success("Brand updated successfully");
       } else {
         // Create Brand
-        const response = await fetch(
+        const createResponse = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-brand",
           {
             method: "POST",
@@ -181,15 +181,56 @@ const BrandFormModal = ({
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(formData),
+            body: JSON.stringify({
+              name: formData.name,
+              description: formData.description,
+              logo_url: "", // Will be updated after logo upload
+            }),
           },
         );
 
-        if (!response.ok) {
-          const errorData = await response.json();
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
           toast.error(errorData.message || "Failed to create brand");
           return;
         }
+
+        const createResult = await createResponse.json();
+        const brandId = createResult.brand_id || createResult.id;
+
+        // Upload logo if selected
+        let finalLogoUrl = formData.logo_url;
+        if (selectedImage && brandId) {
+          try {
+            finalLogoUrl = await uploadLogo(brandId.toString());
+
+            // Update brand with logo URL
+            const updateResponse = await fetch(
+              "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/updateBrand",
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  brand_id: brandId,
+                  brand_name: formData.name,
+                  description: formData.description,
+                  logo_url: finalLogoUrl,
+                }),
+              },
+            );
+
+            if (!updateResponse.ok) {
+              console.warn("Failed to update brand with logo URL");
+            }
+          } catch (logoError) {
+            console.error("Logo upload failed:", logoError);
+            toast.error("Brand created but logo upload failed");
+          }
+        }
+
         toast.success("Brand created successfully");
       }
 
