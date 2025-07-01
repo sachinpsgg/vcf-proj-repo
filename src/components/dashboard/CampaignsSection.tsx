@@ -107,6 +107,8 @@ const CampaignsSection = ({
 }: CampaignsSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch campaigns data
   const {
@@ -121,7 +123,7 @@ const CampaignsSection = ({
   });
 
   // Transform API data to component format
-  const campaigns: Campaign[] =
+  const allCampaigns: Campaign[] =
     campaignsData?.map((c) => ({
       id: String(c.campaign_id),
       name: c.campaign_name,
@@ -142,6 +144,21 @@ const CampaignsSection = ({
         })) || [],
       createdAt: new Date(c.created_at),
     })) || [];
+
+  // Get unique brands for filter dropdown
+  const uniqueBrands = [
+    ...new Set(allCampaigns.map((c) => c.brandName)),
+  ].sort();
+
+  // Filter campaigns based on selected filters
+  const campaigns = allCampaigns.filter((campaign) => {
+    const brandMatch =
+      brandFilter === "all" || campaign.brandName === brandFilter;
+    const statusMatch =
+      statusFilter === "all" ||
+      campaign.status.toLowerCase() === statusFilter.toLowerCase();
+    return brandMatch && statusMatch;
+  });
 
   const handleCreateCampaign = (campaignData: any) => {
     // The actual API call is handled inside CampaignFormModal
@@ -289,6 +306,60 @@ const CampaignsSection = ({
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Filter by Brand:
+          </label>
+          <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select brand" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Brands</SelectItem>
+              {uniqueBrands.map((brand) => (
+                <SelectItem key={brand} value={brand}>
+                  {brand}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Filter by Status:
+          </label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="uat">UAT</SelectItem>
+              <SelectItem value="prod">Prod</SelectItem>
+              <SelectItem value="deactivated">Deactivated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(brandFilter !== "all" || statusFilter !== "all") && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBrandFilter("all");
+              setStatusFilter("all");
+            }}
+            className="gap-2"
+          >
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
@@ -349,9 +420,17 @@ const CampaignsSection = ({
       {/* Campaigns Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Campaigns</CardTitle>
+          <CardTitle>
+            {brandFilter === "all" && statusFilter === "all"
+              ? "All Campaigns"
+              : "Filtered Campaigns"}
+          </CardTitle>
           <CardDescription>
-            View and manage all campaigns, their status, and nurse assignments
+            {brandFilter === "all" && statusFilter === "all"
+              ? "View and manage all campaigns, their status, and nurse assignments"
+              : `Showing ${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}
+                 ${brandFilter !== "all" ? `for ${brandFilter}` : ""}
+                 ${statusFilter !== "all" ? `with status: ${statusFilter.toUpperCase()}` : ""}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
