@@ -18,19 +18,18 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
-  MoreHorizontal,
-  Edit,
-  Trash2,
+  Eye,
+  ExternalLink,
   Power,
-  PowerOff,
   Megaphone,
   Users,
   Building2,
@@ -81,6 +80,7 @@ export interface Campaign {
 
 interface CampaignsSectionProps {
   userRole: "superAdmin" | "admin" | "nurse";
+  onNavigateToDetail?: (campaignId: string) => void;
 }
 
 // Fetch function for campaigns
@@ -107,9 +107,14 @@ const fetchCampaigns = async (): Promise<CampaignApiData[]> => {
   return data.campaigns || [];
 };
 
-const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
+const CampaignsSection = ({
+  userRole,
+  onNavigateToDetail,
+}: CampaignsSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Fetch campaigns data
   const {
@@ -124,7 +129,7 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
   });
 
   // Transform API data to component format
-  const campaigns: Campaign[] =
+  const allCampaigns: Campaign[] =
     campaignsData?.map((c) => ({
       id: String(c.campaign_id),
       name: c.campaign_name,
@@ -145,6 +150,21 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
         })) || [],
       createdAt: new Date(c.created_at),
     })) || [];
+
+  // Get unique brands for filter dropdown
+  const uniqueBrands = [
+    ...new Set(allCampaigns.map((c) => c.brandName)),
+  ].sort();
+
+  // Filter campaigns based on selected filters
+  const campaigns = allCampaigns.filter((campaign) => {
+    const brandMatch =
+      brandFilter === "all" || campaign.brandName === brandFilter;
+    const statusMatch =
+      statusFilter === "all" ||
+      campaign.status.toLowerCase() === statusFilter.toLowerCase();
+    return brandMatch && statusMatch;
+  });
 
   const handleCreateCampaign = (campaignData: any) => {
     // The actual API call is handled inside CampaignFormModal
@@ -292,6 +312,60 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Filter by Brand:
+          </label>
+          <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select brand" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Brands</SelectItem>
+              {uniqueBrands.map((brand) => (
+                <SelectItem key={brand} value={brand}>
+                  {brand}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Filter by Status:
+          </label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="uat">UAT</SelectItem>
+              <SelectItem value="prod">Prod</SelectItem>
+              <SelectItem value="deactivated">Deactivated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(brandFilter !== "all" || statusFilter !== "all") && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBrandFilter("all");
+              setStatusFilter("all");
+            }}
+            className="gap-2"
+          >
+            Clear Filters
+          </Button>
+        )}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
@@ -352,9 +426,17 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
       {/* Campaigns Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Campaigns</CardTitle>
+          <CardTitle>
+            {brandFilter === "all" && statusFilter === "all"
+              ? "All Campaigns"
+              : "Filtered Campaigns"}
+          </CardTitle>
           <CardDescription>
-            View and manage all campaigns, their status, and nurse assignments
+            {brandFilter === "all" && statusFilter === "all"
+              ? "View and manage all campaigns, their status, and nurse assignments"
+              : `Showing ${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}
+                 ${brandFilter !== "all" ? `for ${brandFilter}` : ""}
+                 ${statusFilter !== "all" ? `with status: ${statusFilter.toUpperCase()}` : ""}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -367,14 +449,15 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
                 <TableHead>Phone</TableHead>
                 <TableHead>Assigned Nurses</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Edit</TableHead>
+                <TableHead className="text-center">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {campaigns.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center py-8 text-muted-foreground"
                   >
                     No campaigns found
@@ -434,51 +517,34 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
                     <TableCell>
                       {campaign.createdAt.toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => openEditModal(campaign)}
-                            disabled={campaign.status === "Prod"}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            {campaign.status === "Prod"
-                              ? "Edit (Disabled - Production)"
-                              : "Edit"}
-                          </DropdownMenuItem>
-                          {campaign.status === "Deactivated" ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleActivateCampaign(campaign.id)
-                              }
-                            >
-                              <Power className="mr-2 h-4 w-4" />
-                              Reactivate
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleDeactivateCampaign(campaign.id)
-                              }
-                            >
-                              <PowerOff className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteCampaign(campaign.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(campaign)}
+                        disabled={campaign.status === "Prod"}
+                        className="h-8 w-8 p-0"
+                        title={
+                          campaign.status === "Prod"
+                            ? "Cannot edit production campaigns"
+                            : "Edit campaign"
+                        }
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          onNavigateToDetail?.(`campaign-${campaign.id}`)
+                        }
+                        className="h-8 w-8 p-0"
+                        title="View campaign details"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

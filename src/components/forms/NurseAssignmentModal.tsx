@@ -212,7 +212,7 @@ const NurseAssignmentModal = ({
       <div className="absolute inset-0 bg-black/80" />
 
       {/* Modal Content */}
-      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-background rounded-lg shadow-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div>
