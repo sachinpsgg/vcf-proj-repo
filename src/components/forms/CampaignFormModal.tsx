@@ -430,6 +430,8 @@ const CampaignFormModal = ({
   });
 
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   // Fetch brands + nurses on mount or open
   useEffect(() => {
