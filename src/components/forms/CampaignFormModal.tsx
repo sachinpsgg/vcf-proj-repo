@@ -545,6 +545,23 @@ const CampaignFormModal = ({
 
       const { token } = JSON.parse(storedAuth);
 
+      // Upload logo if selected
+      let finalLogoUrl = form.logo_url;
+      if (selectedImage && form.brand_id) {
+        try {
+          finalLogoUrl = await uploadLogo(form.brand_id);
+        } catch (logoError) {
+          console.error("Logo upload failed:", logoError);
+          toast.error("Failed to upload campaign logo");
+          return;
+        }
+      }
+
+      const campaignPayload = {
+        ...form,
+        logo_url: finalLogoUrl,
+      };
+
       const response = await fetch(
         "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
         {
@@ -553,7 +570,7 @@ const CampaignFormModal = ({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify(campaignPayload),
         },
       );
 
@@ -564,7 +581,7 @@ const CampaignFormModal = ({
 
       const result = await response.json();
       toast.success("Campaign created successfully!");
-      onSubmit(form); // callback to parent
+      onSubmit(campaignPayload); // callback to parent
       onClose();
     } catch (error: any) {
       console.error("Create campaign error:", error);
