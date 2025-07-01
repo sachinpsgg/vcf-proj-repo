@@ -35,6 +35,8 @@ const BrandFormModal = ({
     description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   useEffect(() => {
     if (isOpen && initialData) {
@@ -49,6 +51,7 @@ const BrandFormModal = ({
         logo_url: "",
         description: "",
       });
+      setSelectedImage(null);
     }
   }, [initialData, isOpen]);
 
@@ -71,6 +74,68 @@ const BrandFormModal = ({
     };
   }, [isOpen, isSubmitting, onClose]);
 
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]); // Remove data:image/...;base64, prefix
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadLogo = async (brandId: string): Promise<string> => {
+    if (!selectedImage) throw new Error("No image selected");
+
+    setIsUploadingLogo(true);
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+      const base64Image = await convertToBase64(selectedImage);
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            brand_id: brandId,
+            base64Image: base64Image,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to upload logo");
+      }
+
+      const result = await response.json();
+      return result.logo_url;
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith("image/")) {
+        setSelectedImage(file);
+        setFormData((prev) => ({ ...prev, logo_url: file.name }));
+      } else {
+        toast.error("Please select an image file");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -83,6 +148,19 @@ const BrandFormModal = ({
 
       if (isEditing && initialData) {
         // Edit Brand
+        let finalLogoUrl = formData.logo_url;
+
+        // Upload new logo if selected
+        if (selectedImage) {
+          try {
+            finalLogoUrl = await uploadLogo(initialData.id);
+          } catch (logoError) {
+            console.error("Logo upload failed:", logoError);
+            toast.error("Failed to upload new logo");
+            return;
+          }
+        }
+
         const response = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/updateBrand",
           {
@@ -95,7 +173,7 @@ const BrandFormModal = ({
               brand_id: Number(initialData.id),
               brand_name: formData.name,
               description: formData.description,
-              logo_url: formData.logo_url,
+              logo_url: finalLogoUrl,
             }),
           },
         );
@@ -109,7 +187,7 @@ const BrandFormModal = ({
         toast.success("Brand updated successfully");
       } else {
         // Create Brand
-        const response = await fetch(
+        const createResponse = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-brand",
           {
             method: "POST",
@@ -117,15 +195,56 @@ const BrandFormModal = ({
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(formData),
+            body: JSON.stringify({
+              name: formData.name,
+              description: formData.description,
+              logo_url: "", // Will be updated after logo upload
+            }),
           },
         );
 
-        if (!response.ok) {
-          const errorData = await response.json();
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
           toast.error(errorData.message || "Failed to create brand");
           return;
         }
+
+        const createResult = await createResponse.json();
+        const brandId = createResult.brand_id || createResult.id;
+
+        // Upload logo if selected
+        let finalLogoUrl = formData.logo_url;
+        if (selectedImage && brandId) {
+          try {
+            finalLogoUrl = await uploadLogo(brandId.toString());
+
+            // Update brand with logo URL
+            const updateResponse = await fetch(
+              "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/updateBrand",
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  brand_id: brandId,
+                  brand_name: formData.name,
+                  description: formData.description,
+                  logo_url: finalLogoUrl,
+                }),
+              },
+            );
+
+            if (!updateResponse.ok) {
+              console.warn("Failed to update brand with logo URL");
+            }
+          } catch (logoError) {
+            console.error("Logo upload failed:", logoError);
+            toast.error("Brand created but logo upload failed");
+          }
+        }
+
         toast.success("Brand created successfully");
       }
 
@@ -200,29 +319,36 @@ const BrandFormModal = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="logo_url">Brand Logo URL</Label>
+              <Label htmlFor="logo_file">Brand Logo</Label>
               <div className="flex gap-2">
                 <Input
-                  id="logo_url"
-                  value={formData.logo_url}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      logo_url: e.target.value,
-                    }))
-                  }
-                  placeholder="https://example.com/logo.png"
-                  disabled={isSubmitting}
+                  id="logo_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={isSubmitting || isUploadingLogo}
+                  className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingLogo}
+                  onClick={() => document.getElementById("logo_file")?.click()}
                 >
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
+              {selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedImage.name}
+                </p>
+              )}
+              {formData.logo_url && !selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Current: {formData.logo_url}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -253,12 +379,14 @@ const BrandFormModal = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isUploadingLogo}>
               {isSubmitting
                 ? "Saving..."
-                : isEditing
-                  ? "Update Brand"
-                  : "Create Brand"}
+                : isUploadingLogo
+                  ? "Uploading..."
+                  : isEditing
+                    ? "Update Brand"
+                    : "Create Brand"}
             </Button>
           </div>
         </form>

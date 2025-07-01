@@ -430,6 +430,8 @@ const CampaignFormModal = ({
   });
 
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   // Fetch brands + nurses on mount or open
   useEffect(() => {
@@ -462,15 +464,93 @@ const CampaignFormModal = ({
         notes: "",
         nurse_ids: [],
       });
+      setSelectedImage(null);
     }
   }, [initialData, isOpen]);
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]); // Remove data:image/...;base64, prefix
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadLogo = async (brandId: number): Promise<string> => {
+    if (!selectedImage) throw new Error("No image selected");
+
+    setIsUploadingLogo(true);
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+      const base64Image = await convertToBase64(selectedImage);
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            brand_id: brandId.toString(),
+            base64Image: base64Image,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to upload logo");
+      }
+
+      const result = await response.json();
+      return result.logo_url;
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith("image/")) {
+        setSelectedImage(file);
+        setForm((prev) => ({ ...prev, logo_url: file.name }));
+      } else {
+        toast.error("Please select an image file");
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (isEditing) {
-      // For editing, just call the onSubmit callback (parent handles the API call)
-      onSubmit(form);
+      // For editing, handle logo upload if new image selected
+      let finalLogoUrl = form.logo_url;
+      if (selectedImage && form.brand_id) {
+        try {
+          finalLogoUrl = await uploadLogo(form.brand_id);
+        } catch (logoError) {
+          console.error("Logo upload failed:", logoError);
+          toast.error("Failed to upload campaign logo");
+          return;
+        }
+      }
+
+      // Call the onSubmit callback with updated logo URL (parent handles the API call)
+      onSubmit({
+        ...form,
+        logo_url: finalLogoUrl,
+      });
       return;
     }
 
@@ -481,6 +561,23 @@ const CampaignFormModal = ({
 
       const { token } = JSON.parse(storedAuth);
 
+      // Upload logo if selected
+      let finalLogoUrl = form.logo_url;
+      if (selectedImage && form.brand_id) {
+        try {
+          finalLogoUrl = await uploadLogo(form.brand_id);
+        } catch (logoError) {
+          console.error("Logo upload failed:", logoError);
+          toast.error("Failed to upload campaign logo");
+          return;
+        }
+      }
+
+      const campaignPayload = {
+        ...form,
+        logo_url: finalLogoUrl,
+      };
+
       const response = await fetch(
         "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
         {
@@ -489,7 +586,7 @@ const CampaignFormModal = ({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify(campaignPayload),
         },
       );
 
@@ -500,7 +597,7 @@ const CampaignFormModal = ({
 
       const result = await response.json();
       toast.success("Campaign created successfully!");
-      onSubmit(form); // callback to parent
+      onSubmit(campaignPayload); // callback to parent
       onClose();
     } catch (error: any) {
       console.error("Create campaign error:", error);
@@ -554,17 +651,37 @@ const CampaignFormModal = ({
           </div>
 
           <div>
-            <Label>Logo URL</Label>
+            <Label>Campaign Logo</Label>
             <div className="flex gap-2">
               <Input
-                value={form.logo_url}
-                onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                placeholder="https://..."
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={isUploadingLogo}
+                className="flex-1"
               />
-              <Button size="icon" variant="outline">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={isUploadingLogo}
+                onClick={() =>
+                  document.querySelector('input[type="file"]')?.click()
+                }
+              >
                 <Upload className="w-4 h-4" />
               </Button>
             </div>
+            {selectedImage && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Selected: {selectedImage.name}
+              </p>
+            )}
+            {form.logo_url && !selectedImage && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Current: {form.logo_url}
+              </p>
+            )}
           </div>
 
           {/* Dates */}
@@ -601,11 +718,19 @@ const CampaignFormModal = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isUploadingLogo}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {isEditing ? "Update Campaign" : "Create Campaign"}
+            <Button type="submit" disabled={isUploadingLogo}>
+              {isUploadingLogo
+                ? "Uploading..."
+                : isEditing
+                  ? "Update Campaign"
+                  : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>

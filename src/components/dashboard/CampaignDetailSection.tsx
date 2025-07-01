@@ -19,6 +19,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus,
   Edit,
   Power,
@@ -28,6 +38,7 @@ import {
   Calendar,
   Building2,
   Loader2,
+  Send,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import NurseAssignmentModal from "@/components/forms/NurseAssignmentModal";
@@ -140,6 +151,7 @@ const CampaignDetailSection = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isNurseAssignmentModalOpen, setIsNurseAssignmentModalOpen] =
     useState(false);
+  const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
 
   // Fetch campaign data
   const {
@@ -226,6 +238,44 @@ const CampaignDetailSection = ({
     toast.success(
       `Campaign ${newStatus === "deactivated" ? "deactivated" : "reactivated"}`,
     );
+  };
+
+  const handlePublishCampaign = async () => {
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+
+      // Extract numeric ID from campaign-{id} format
+      const numericId = campaignId.replace("campaign-", "");
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/publish",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            campaign_id: parseInt(numericId, 10),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to publish campaign");
+      }
+
+      toast.success("Campaign published successfully");
+      setIsPublishWarningOpen(false);
+      refetchCampaign();
+    } catch (error: any) {
+      console.error("Error publishing campaign:", error);
+      toast.error(error.message || "Failed to publish campaign");
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -341,38 +391,100 @@ const CampaignDetailSection = ({
             <Users className="w-4 h-4" />
             Assign Nurse
           </Button>
-          <Button
-            onClick={openEditModal}
-            variant="outline"
-            className="gap-2"
-            disabled={campaign.campaignStatus === "active"}
-          >
-            <Edit className="w-4 h-4" />
-            {campaign.campaignStatus === "active"
-              ? "Edit (Active)"
-              : "Edit Campaign"}
-          </Button>
-          <Button
-            onClick={handleToggleStatus}
-            variant={
-              campaign.campaignStatus === "deactivated"
-                ? "default"
-                : "destructive"
-            }
-            className="gap-2"
-          >
-            {campaign.campaignStatus === "deactivated" ? (
-              <>
-                <Power className="w-4 h-4" />
-                Reactivate
-              </>
-            ) : (
-              <>
+
+          {/* Status-based button logic */}
+          {campaign.campaignStatus?.toLowerCase() === "draft" && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Campaign
+              </Button>
+              <Button
+                onClick={handleToggleStatus}
+                variant="destructive"
+                className="gap-2"
+              >
                 <PowerOff className="w-4 h-4" />
                 Deactivate
-              </>
-            )}
-          </Button>
+              </Button>
+            </>
+          )}
+
+          {campaign.campaignStatus?.toLowerCase() === "uat" && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Campaign
+              </Button>
+              <Button
+                onClick={() => setIsPublishWarningOpen(true)}
+                variant="default"
+                className="gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Publish
+              </Button>
+            </>
+          )}
+
+          {campaign.campaignStatus?.toLowerCase() === "prod" && (
+            <Button
+              onClick={handleToggleStatus}
+              variant="destructive"
+              className="gap-2"
+            >
+              <PowerOff className="w-4 h-4" />
+              Deactivate
+            </Button>
+          )}
+
+          {/* Default fallback for other statuses */}
+          {!["draft", "uat", "prod"].includes(
+            campaign.campaignStatus?.toLowerCase() || "",
+          ) && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+                disabled={campaign.campaignStatus === "active"}
+              >
+                <Edit className="w-4 h-4" />
+                {campaign.campaignStatus === "active"
+                  ? "Edit (Active)"
+                  : "Edit Campaign"}
+              </Button>
+              <Button
+                onClick={handleToggleStatus}
+                variant={
+                  campaign.campaignStatus === "deactivated"
+                    ? "default"
+                    : "destructive"
+                }
+                className="gap-2"
+              >
+                {campaign.campaignStatus === "deactivated" ? (
+                  <>
+                    <Power className="w-4 h-4" />
+                    Reactivate
+                  </>
+                ) : (
+                  <>
+                    <PowerOff className="w-4 h-4" />
+                    Deactivate
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -556,6 +668,29 @@ const CampaignDetailSection = ({
           })) || []
         }
       />
+
+      {/* Publish Warning Alert Dialog */}
+      <AlertDialog
+        open={isPublishWarningOpen}
+        onOpenChange={setIsPublishWarningOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to publish this campaign? After publishing,
+              you will not be able to modify the campaign information.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublishCampaign}>
+              <Send className="w-4 h-4 mr-2" />
+              Publish Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
