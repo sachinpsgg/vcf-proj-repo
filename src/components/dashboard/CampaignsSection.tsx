@@ -69,9 +69,12 @@ export interface Campaign {
   name: string;
   logo?: string;
   brandName: string;
+  brandId: number;
   status: CampaignStatus;
   phoneNumber: string;
   notes: string;
+  startDate: string;
+  endDate: string;
   assignedNurses: { id: string; name: string; email: string }[];
   createdAt: Date;
 }
@@ -127,10 +130,13 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
       name: c.campaign_name,
       logo: c.logo_url,
       brandName: c.brand_name || `Brand ${c.brand_id}`,
+      brandId: c.brand_id,
       status: (c.campaignStatus.charAt(0).toUpperCase() +
         c.campaignStatus.slice(1)) as CampaignStatus,
       phoneNumber: c.work_number || "N/A",
       notes: c.notes,
+      startDate: c.start_date.split("T")[0], // Convert to YYYY-MM-DD format
+      endDate: c.end_date.split("T")[0],
       assignedNurses:
         c.assigned_nurses?.map((n) => ({
           id: String(n.user_id),
@@ -496,9 +502,9 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
             ? {
                 name: editingCampaign.name,
                 logo_url: editingCampaign.logo || "",
-                brand_id: 0, // This would need proper brand mapping
-                start_date: "", // These dates aren't available in current Campaign interface
-                end_date: "",
+                brand_id: editingCampaign.brandId,
+                start_date: editingCampaign.startDate,
+                end_date: editingCampaign.endDate,
                 notes: editingCampaign.notes,
                 nurse_ids: editingCampaign.assignedNurses.map((n) =>
                   parseInt(n.id, 10),
