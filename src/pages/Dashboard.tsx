@@ -77,14 +77,24 @@ const Dashboard = () => {
         if (user.role === "superAdmin") {
           return <BrandsSection />;
         } else if (user.role === "admin") {
-          return <CampaignsSection userRole={user.role} />;
+          return (
+            <CampaignsSection
+              userRole={user.role}
+              onNavigateToDetail={setActiveSection}
+            />
+          );
         } else {
           return <NurseAssignedCampaigns />;
         }
       case "campaigns":
         // SuperAdmin and Admin can access campaign management
         if (user.role === "superAdmin" || user.role === "admin") {
-          return <CampaignsSection userRole={user.role} />;
+          return (
+            <CampaignsSection
+              userRole={user.role}
+              onNavigateToDetail={setActiveSection}
+            />
+          );
         } else {
           return <NurseAssignedCampaigns />;
         }
@@ -117,7 +127,12 @@ const Dashboard = () => {
         // Default view based on role
         if (user.role === "superAdmin") return <BrandsSection />;
         if (user.role === "admin")
-          return <CampaignsSection userRole={user.role} />;
+          return (
+            <CampaignsSection
+              userRole={user.role}
+              onNavigateToDetail={setActiveSection}
+            />
+          );
         if (user.role === "nurse") return <NurseAssignedCampaigns />;
         return <div>Welcome to Dashboard</div>;
     }
