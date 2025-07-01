@@ -318,29 +318,36 @@ const BrandFormModal = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="logo_url">Brand Logo URL</Label>
+              <Label htmlFor="logo_file">Brand Logo</Label>
               <div className="flex gap-2">
                 <Input
-                  id="logo_url"
-                  value={formData.logo_url}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      logo_url: e.target.value,
-                    }))
-                  }
-                  placeholder="https://example.com/logo.png"
-                  disabled={isSubmitting}
+                  id="logo_file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={isSubmitting || isUploadingLogo}
+                  className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingLogo}
+                  onClick={() => document.getElementById("logo_file")?.click()}
                 >
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
+              {selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedImage.name}
+                </p>
+              )}
+              {formData.logo_url && !selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Current: {formData.logo_url}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
