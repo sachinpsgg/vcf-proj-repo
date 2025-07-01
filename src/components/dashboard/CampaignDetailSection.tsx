@@ -151,6 +151,7 @@ const CampaignDetailSection = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isNurseAssignmentModalOpen, setIsNurseAssignmentModalOpen] =
     useState(false);
+  const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
 
   // Fetch campaign data
   const {
