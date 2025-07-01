@@ -391,38 +391,100 @@ const CampaignDetailSection = ({
             <Users className="w-4 h-4" />
             Assign Nurse
           </Button>
-          <Button
-            onClick={openEditModal}
-            variant="outline"
-            className="gap-2"
-            disabled={campaign.campaignStatus === "active"}
-          >
-            <Edit className="w-4 h-4" />
-            {campaign.campaignStatus === "active"
-              ? "Edit (Active)"
-              : "Edit Campaign"}
-          </Button>
-          <Button
-            onClick={handleToggleStatus}
-            variant={
-              campaign.campaignStatus === "deactivated"
-                ? "default"
-                : "destructive"
-            }
-            className="gap-2"
-          >
-            {campaign.campaignStatus === "deactivated" ? (
-              <>
-                <Power className="w-4 h-4" />
-                Reactivate
-              </>
-            ) : (
-              <>
+
+          {/* Status-based button logic */}
+          {campaign.campaignStatus?.toLowerCase() === "draft" && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Campaign
+              </Button>
+              <Button
+                onClick={handleToggleStatus}
+                variant="destructive"
+                className="gap-2"
+              >
                 <PowerOff className="w-4 h-4" />
                 Deactivate
-              </>
-            )}
-          </Button>
+              </Button>
+            </>
+          )}
+
+          {campaign.campaignStatus?.toLowerCase() === "uat" && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Campaign
+              </Button>
+              <Button
+                onClick={() => setIsPublishWarningOpen(true)}
+                variant="default"
+                className="gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Publish
+              </Button>
+            </>
+          )}
+
+          {campaign.campaignStatus?.toLowerCase() === "prod" && (
+            <Button
+              onClick={handleToggleStatus}
+              variant="destructive"
+              className="gap-2"
+            >
+              <PowerOff className="w-4 h-4" />
+              Deactivate
+            </Button>
+          )}
+
+          {/* Default fallback for other statuses */}
+          {!["draft", "uat", "prod"].includes(
+            campaign.campaignStatus?.toLowerCase() || "",
+          ) && (
+            <>
+              <Button
+                onClick={openEditModal}
+                variant="outline"
+                className="gap-2"
+                disabled={campaign.campaignStatus === "active"}
+              >
+                <Edit className="w-4 h-4" />
+                {campaign.campaignStatus === "active"
+                  ? "Edit (Active)"
+                  : "Edit Campaign"}
+              </Button>
+              <Button
+                onClick={handleToggleStatus}
+                variant={
+                  campaign.campaignStatus === "deactivated"
+                    ? "default"
+                    : "destructive"
+                }
+                className="gap-2"
+              >
+                {campaign.campaignStatus === "deactivated" ? (
+                  <>
+                    <Power className="w-4 h-4" />
+                    Reactivate
+                  </>
+                ) : (
+                  <>
+                    <PowerOff className="w-4 h-4" />
+                    Deactivate
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
