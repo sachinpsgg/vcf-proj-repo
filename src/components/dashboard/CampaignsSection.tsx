@@ -23,6 +23,7 @@ import {
   Plus,
   Eye,
   ExternalLink,
+  Power,
   Megaphone,
   Users,
   Building2,
