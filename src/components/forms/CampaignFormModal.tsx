@@ -533,8 +533,23 @@ const CampaignFormModal = ({
     e.preventDefault();
 
     if (isEditing) {
-      // For editing, just call the onSubmit callback (parent handles the API call)
-      onSubmit(form);
+      // For editing, handle logo upload if new image selected
+      let finalLogoUrl = form.logo_url;
+      if (selectedImage && form.brand_id) {
+        try {
+          finalLogoUrl = await uploadLogo(form.brand_id);
+        } catch (logoError) {
+          console.error("Logo upload failed:", logoError);
+          toast.error("Failed to upload campaign logo");
+          return;
+        }
+      }
+
+      // Call the onSubmit callback with updated logo URL (parent handles the API call)
+      onSubmit({
+        ...form,
+        logo_url: finalLogoUrl,
+      });
       return;
     }
 
