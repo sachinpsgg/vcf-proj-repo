@@ -42,6 +42,7 @@ interface DashboardLayoutProps {
   userEmail: string;
   activeSection?: string;
   onSectionChange?: (section: string) => void;
+  hideDetailNavigation?: boolean;
 }
 
 interface SidebarItem {
@@ -129,6 +130,7 @@ const DashboardLayout = ({
   userEmail,
   activeSection = "brands",
   onSectionChange,
+  hideDetailNavigation = false,
 }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -178,7 +180,7 @@ const DashboardLayout = ({
         );
 
         const data = await res.json();
-        console.log(data)
+        console.log(data);
         const mappedCampaigns = data.campaigns.map((c: any) => ({
           label: c.campaign_name,
           id: `campaign-${c.campaign_id}`,
@@ -238,9 +240,11 @@ const DashboardLayout = ({
           icon: Megaphone,
           label: "Campaigns",
           id: "campaigns",
-          subItems: loadingCampaigns
-            ? [{ label: "Loading...", id: "loading" }]
-            : campaigns,
+          subItems: hideDetailNavigation
+            ? undefined
+            : loadingCampaigns
+              ? [{ label: "Loading...", id: "loading" }]
+              : campaigns,
         },
         { icon: Users, label: "Users", id: "users" },
       ];
@@ -251,9 +255,11 @@ const DashboardLayout = ({
           icon: Megaphone,
           label: "Campaigns",
           id: "campaigns",
-          subItems: loadingCampaigns
-            ? [{ label: "Loading...", id: "loading" }]
-            : campaigns,
+          subItems: hideDetailNavigation
+            ? undefined
+            : loadingCampaigns
+              ? [{ label: "Loading...", id: "loading" }]
+              : campaigns,
         },
         { icon: Users, label: "Nurses", id: "nurses" },
         {
@@ -263,7 +269,18 @@ const DashboardLayout = ({
         },
       ];
     } else if (userRole === "nurse") {
-      // Nurse sidebar with brand and campaigns
+      // For nurse, hide campaign subitems when viewing details
+      if (hideDetailNavigation) {
+        return [
+          {
+            icon: Building2,
+            label: nurseBrand?.brand_name || "My Brand",
+            id: "nurse-brand",
+          },
+        ];
+      }
+
+      // Normal nurse sidebar with brand and campaigns
       const nurseCampaignItems =
         nurseCampaigns?.map((campaign) => ({
           label: campaign.campaign_name,

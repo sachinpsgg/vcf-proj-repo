@@ -39,6 +39,7 @@ import {
   Building2,
   Loader2,
   Send,
+  ArrowLeft,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
@@ -47,6 +48,7 @@ import { toast } from "sonner";
 interface CampaignDetailSectionProps {
   campaignId: string;
   userRole: "superAdmin" | "admin" | "nurse";
+  onBack?: () => void;
 }
 
 interface CampaignApiData {
@@ -143,6 +145,7 @@ const fetchCampaignNurses = async (
 const CampaignDetailSection = ({
   campaignId,
   userRole,
+  onBack,
 }: CampaignDetailSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -336,6 +339,20 @@ const CampaignDetailSection = ({
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      {onBack && (
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="gap-2 hover:bg-muted"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+      )}
+
       {/* Campaign Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">

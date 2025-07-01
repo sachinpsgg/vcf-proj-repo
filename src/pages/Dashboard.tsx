@@ -57,10 +57,21 @@ const Dashboard = () => {
   const renderContent = () => {
     // Handle individual campaign views
     if (activeSection.startsWith("campaign-")) {
+      const handleBack = () => {
+        if (user.role === "superAdmin") {
+          setActiveSection("campaigns");
+        } else if (user.role === "admin") {
+          setActiveSection("campaigns");
+        } else {
+          setActiveSection("assigned-campaigns");
+        }
+      };
+
       return (
         <CampaignDetailSection
           campaignId={activeSection}
           userRole={user.role}
+          onBack={handleBack}
         />
       );
     }
@@ -144,6 +155,7 @@ const Dashboard = () => {
       userEmail={user.email}
       activeSection={activeSection}
       onSectionChange={setActiveSection}
+      hideDetailNavigation={activeSection.startsWith("campaign-")}
     >
       {renderContent()}
     </DashboardLayout>
