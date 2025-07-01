@@ -41,7 +41,6 @@ import {
   Send,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
-import NurseAssignmentModal from "@/components/forms/NurseAssignmentModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
 import { toast } from "sonner";
 
@@ -79,8 +78,6 @@ interface CampaignPayload {
   name: string;
   logo_url: string;
   brand_id: number;
-  start_date: string;
-  end_date: string;
   notes: string;
   nurse_ids: number[];
 }
@@ -149,8 +146,6 @@ const CampaignDetailSection = ({
 }: CampaignDetailSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isNurseAssignmentModalOpen, setIsNurseAssignmentModalOpen] =
-    useState(false);
   const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
 
   // Fetch campaign data
@@ -190,8 +185,7 @@ const CampaignDetailSection = ({
       const updatePayload = {
         campaign_id: parseInt(numericId, 10),
         name: campaignData.name,
-        start_date: campaignData.start_date,
-        end_date: campaignData.end_date,
+        notes: campaignData.notes,
       };
 
       const response = await fetch(
@@ -300,8 +294,6 @@ const CampaignDetailSection = ({
       name: campaign.campaign_name,
       logo_url: campaign.logo_url,
       brand_id: campaign.brand_id,
-      start_date: campaign.start_date.split("T")[0], // Convert to YYYY-MM-DD format
-      end_date: campaign.end_date.split("T")[0],
       notes: campaign.notes,
       nurse_ids: nurses?.map((nurse) => nurse.user_id) || [],
     };
@@ -382,14 +374,6 @@ const CampaignDetailSection = ({
           <Button onClick={openCreateModal} variant="outline" className="gap-2">
             <Plus className="w-4 h-4" />
             Create New Campaign
-          </Button>
-          <Button
-            onClick={() => setIsNurseAssignmentModalOpen(true)}
-            variant="outline"
-            className="gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Assign Nurse
           </Button>
 
           {/* Status-based button logic */}
@@ -489,7 +473,7 @@ const CampaignDetailSection = ({
       </div>
 
       {/* Campaign Details */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -516,32 +500,6 @@ const CampaignDetailSection = ({
           <CardContent>
             <div className="text-2xl font-bold">{nurses?.length || 0}</div>
             <p className="text-xs text-muted-foreground">Active team members</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Start Date</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {new Date(campaign.start_date).toLocaleDateString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Campaign start</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">End Date</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {new Date(campaign.end_date).toLocaleDateString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Campaign end</p>
           </CardContent>
         </Card>
       </div>
@@ -646,27 +604,6 @@ const CampaignDetailSection = ({
           isEditing && campaign ? formatCampaignForEdit(campaign) : null
         }
         isEditing={isEditing}
-      />
-
-      {/* Nurse Assignment Modal */}
-      <NurseAssignmentModal
-        isOpen={isNurseAssignmentModalOpen}
-        onClose={() => setIsNurseAssignmentModalOpen(false)}
-        onSuccess={() => {
-          refetchNurses();
-          toast.success("Nurse assignment updated successfully");
-        }}
-        campaignId={campaign ? campaign.campaign_id : 0}
-        campaignName={campaign ? campaign.campaign_name : ""}
-        brandId={campaign ? campaign.brand_id : 0}
-        currentNurses={
-          nurses?.map((nurse) => ({
-            user_id: nurse.user_id,
-            email: nurse.email,
-            first_name: nurse.first_name,
-            last_name: nurse.last_name,
-          })) || []
-        }
       />
 
       {/* Publish Warning Alert Dialog */}

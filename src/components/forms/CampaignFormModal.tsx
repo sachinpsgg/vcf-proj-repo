@@ -389,22 +389,78 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Upload } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Upload, UserPlus, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import NurseCreateModal from "@/components/forms/NurseCreateModal";
+import type { UserStatus } from "@/components/forms/UserFormModal";
 
 interface Brand {
-  id: number;
-  name: string;
+  brand_id: number;
+  brand_name: string;
 }
+
+interface Nurse {
+  user_id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  userStatus: string;
+}
+
 interface CampaignPayload {
   name: string;
   logo_url: string;
   brand_id: number;
-  start_date: string;
-  end_date: string;
   notes: string;
   nurse_ids: number[];
 }
+
+// Static data for brands and nurses
+const staticBrands: Brand[] = [
+  { brand_id: 1, brand_name: "HealthTech Solutions" },
+  { brand_id: 2, brand_name: "MedCare Plus" },
+  { brand_id: 3, brand_name: "Wellness Group" },
+  { brand_id: 4, brand_name: "LifeCare Medical" },
+];
+
+const staticNurses: Nurse[] = [
+  {
+    user_id: 1,
+    first_name: "Sarah",
+    last_name: "Wilson",
+    email: "sarah@healthtech.com",
+    userStatus: "active",
+  },
+  {
+    user_id: 2,
+    first_name: "Mike",
+    last_name: "Johnson",
+    email: "mike@healthtech.com",
+    userStatus: "active",
+  },
+  {
+    user_id: 3,
+    first_name: "Emma",
+    last_name: "Davis",
+    email: "emma@medcareplus.com",
+    userStatus: "active",
+  },
+  {
+    user_id: 4,
+    first_name: "Lisa",
+    last_name: "Brown",
+    email: "lisa@wellness.com",
+    userStatus: "active",
+  },
+  {
+    user_id: 5,
+    first_name: "David",
+    last_name: "Miller",
+    email: "david@lifecare.com",
+    userStatus: "active",
+  },
+];
 
 const CampaignFormModal = ({
   isOpen,
@@ -423,30 +479,13 @@ const CampaignFormModal = ({
     name: "",
     logo_url: "",
     brand_id: 0,
-    start_date: "",
-    end_date: "",
     notes: "",
     nurse_ids: [],
   });
 
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [selectedNurse, setSelectedNurse] = useState<string>("");
+  const [isNurseModalOpen, setIsNurseModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-
-  // Fetch brands + nurses on mount or open
-  useEffect(() => {
-    const token = JSON.parse(localStorage.getItem("user") || "{}").token;
-    if (!token) return;
-
-    fetch(
-      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-brands",
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    )
-      .then((res) => res.json())
-      .then((data) => setBrands(data.brands || []));
-  }, [isOpen]);
 
   useEffect(() => {
     if (initialData) {
@@ -459,64 +498,14 @@ const CampaignFormModal = ({
         name: "",
         logo_url: "",
         brand_id: 0,
-        start_date: "",
-        end_date: "",
         notes: "",
         nurse_ids: [],
       });
       setSelectedImage(null);
     }
+    setSelectedNurse("");
+    setIsNurseModalOpen(false);
   }, [initialData, isOpen]);
-
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        resolve(result.split(",")[1]); // Remove data:image/...;base64, prefix
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const uploadLogo = async (brandId: number): Promise<string> => {
-    if (!selectedImage) throw new Error("No image selected");
-
-    setIsUploadingLogo(true);
-    try {
-      const storedAuth = localStorage.getItem("user");
-      if (!storedAuth) throw new Error("User not authenticated");
-
-      const { token } = JSON.parse(storedAuth);
-      const base64Image = await convertToBase64(selectedImage);
-
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            brand_id: brandId.toString(),
-            base64Image: base64Image,
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Failed to upload logo");
-      }
-
-      const result = await response.json();
-      return result.logo_url;
-    } finally {
-      setIsUploadingLogo(false);
-    }
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -530,102 +519,106 @@ const CampaignFormModal = ({
     }
   };
 
+  const handleAddNurse = () => {
+    if (selectedNurse) {
+      const nurseId = parseInt(selectedNurse, 10);
+      if (nurseId && !form.nurse_ids.includes(nurseId)) {
+        setForm((prev) => ({
+          ...prev,
+          nurse_ids: [...prev.nurse_ids, nurseId],
+        }));
+        setSelectedNurse("");
+      }
+    }
+  };
+
+  const handleCreateNurse = (nurseData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    status: UserStatus;
+    assignedBrands: { id: string; name: string }[];
+  }) => {
+    const newNurseId = Math.max(...staticNurses.map((n) => n.user_id), 0) + 1;
+    staticNurses.push({
+      user_id: newNurseId,
+      first_name: nurseData.firstName,
+      last_name: nurseData.lastName,
+      email: nurseData.email,
+      userStatus: "active",
+    });
+
+    setForm((prev) => ({
+      ...prev,
+      nurse_ids: [...prev.nurse_ids, newNurseId],
+    }));
+    setIsNurseModalOpen(false);
+  };
+
+  const handleRemoveNurse = (nurseId: number) => {
+    setForm((prev) => ({
+      ...prev,
+      nurse_ids: prev.nurse_ids.filter((id) => id !== nurseId),
+    }));
+  };
+
+  const getAvailableNurses = () =>
+    staticNurses.filter(
+      (nurse) =>
+        !form.nurse_ids.includes(nurse.user_id) &&
+        nurse.userStatus === "active",
+    );
+
+  const getAssignedNurses = () =>
+    staticNurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isEditing) {
-      // For editing, handle logo upload if new image selected
-      let finalLogoUrl = form.logo_url;
-      if (selectedImage && form.brand_id) {
-        try {
-          finalLogoUrl = await uploadLogo(form.brand_id);
-        } catch (logoError) {
-          console.error("Logo upload failed:", logoError);
-          toast.error("Failed to upload campaign logo");
-          return;
-        }
-      }
-
-      // Call the onSubmit callback with updated logo URL (parent handles the API call)
-      onSubmit({
-        ...form,
-        logo_url: finalLogoUrl,
-      });
-      return;
+    // Static data handling - just call the parent callback
+    let finalLogoUrl = form.logo_url;
+    if (selectedImage) {
+      finalLogoUrl = URL.createObjectURL(selectedImage); // Create a local URL for display
     }
 
-    // For creating new campaigns, make the actual API call
-    try {
-      const storedAuth = localStorage.getItem("user");
-      if (!storedAuth) throw new Error("User not authenticated");
+    onSubmit({
+      ...form,
+      logo_url: finalLogoUrl,
+    });
 
-      const { token } = JSON.parse(storedAuth);
-
-      // Upload logo if selected
-      let finalLogoUrl = form.logo_url;
-      if (selectedImage && form.brand_id) {
-        try {
-          finalLogoUrl = await uploadLogo(form.brand_id);
-        } catch (logoError) {
-          console.error("Logo upload failed:", logoError);
-          toast.error("Failed to upload campaign logo");
-          return;
-        }
-      }
-
-      const campaignPayload = {
-        ...form,
-        logo_url: finalLogoUrl,
-      };
-
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(campaignPayload),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Failed to create campaign");
-      }
-
-      const result = await response.json();
-      toast.success("Campaign created successfully!");
-      onSubmit(campaignPayload); // callback to parent
-      onClose();
-    } catch (error: any) {
-      console.error("Create campaign error:", error);
-      toast.error(error.message || "Something went wrong");
-    }
+    onClose();
+    toast.success(
+      isEditing
+        ? "Campaign updated successfully!"
+        : "Campaign created successfully!",
+    );
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Campaign" : "Create Campaign"}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? "Update campaign info" : "Create a new campaign"}
+            {isEditing
+              ? "Update campaign info and nurse assignments"
+              : "Create a new campaign and assign nurses"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name, Logo URL */}
+          {/* Name and Brand */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Name</Label>
+              <Label>Campaign Name</Label>
               <Input
                 required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Enter campaign name"
               />
             </div>
             <div>
@@ -640,7 +633,7 @@ const CampaignFormModal = ({
                   <SelectValue placeholder="Select Brand" />
                 </SelectTrigger>
                 <SelectContent>
-                  {brands.map((b) => (
+                  {staticBrands.map((b) => (
                     <SelectItem key={b.brand_id} value={String(b.brand_id)}>
                       {b.brand_name}
                     </SelectItem>
@@ -657,14 +650,12 @@ const CampaignFormModal = ({
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                disabled={isUploadingLogo}
                 className="flex-1"
               />
               <Button
                 type="button"
                 size="icon"
                 variant="outline"
-                disabled={isUploadingLogo}
                 onClick={() =>
                   document.querySelector('input[type="file"]')?.click()
                 }
@@ -684,57 +675,105 @@ const CampaignFormModal = ({
             )}
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Start Date</Label>
-              <Input
-                type="date"
-                required
-                value={form.start_date}
-                onChange={(e) =>
-                  setForm({ ...form, start_date: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label>End Date</Label>
-              <Input
-                type="date"
-                required
-                value={form.end_date}
-                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-              />
-            </div>
-          </div>
-
           <div>
             <Label>Notes</Label>
             <Textarea
               rows={3}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Campaign description and notes..."
             />
           </div>
 
+          {/* Nurse Assignment Section */}
+          <div className="space-y-4">
+            <div>
+              <Label className="text-base font-medium">Assigned Nurses</Label>
+              <div className="mt-2 space-y-3">
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedNurse}
+                    onValueChange={setSelectedNurse}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a nurse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAvailableNurses().map((nurse) => (
+                        <SelectItem
+                          key={nurse.user_id}
+                          value={nurse.user_id.toString()}
+                        >
+                          {nurse.first_name} {nurse.last_name} ({nurse.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    onClick={handleAddNurse}
+                    disabled={!selectedNurse}
+                    size="icon"
+                    variant="outline"
+                    title="Assign existing nurse"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setIsNurseModalOpen(true)}
+                    size="icon"
+                    variant="outline"
+                    title="Create new nurse"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {getAssignedNurses().map((nurse) => (
+                    <Badge
+                      key={nurse.user_id}
+                      variant="outline"
+                      className="gap-1"
+                    >
+                      {nurse.first_name} {nurse.last_name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNurse(nurse.user_id)}
+                        className="hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {form.nurse_ids.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No nurses assigned
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={isUploadingLogo}
-            >
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isUploadingLogo}>
-              {isUploadingLogo
-                ? "Uploading..."
-                : isEditing
-                  ? "Update Campaign"
-                  : "Create Campaign"}
+            <Button type="submit">
+              {isEditing ? "Update Campaign" : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Nurse Creation Sub-Modal */}
+      <NurseCreateModal
+        isOpen={isNurseModalOpen}
+        onClose={() => setIsNurseModalOpen(false)}
+        onSubmit={handleCreateNurse}
+      />
     </Dialog>
   );
 };
