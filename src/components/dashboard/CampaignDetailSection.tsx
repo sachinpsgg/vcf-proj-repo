@@ -668,6 +668,29 @@ const CampaignDetailSection = ({
           })) || []
         }
       />
+
+      {/* Publish Warning Alert Dialog */}
+      <AlertDialog
+        open={isPublishWarningOpen}
+        onOpenChange={setIsPublishWarningOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to publish this campaign? After publishing,
+              you will not be able to modify the campaign information.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handlePublishCampaign}>
+              <Send className="w-4 h-4 mr-2" />
+              Publish Campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
