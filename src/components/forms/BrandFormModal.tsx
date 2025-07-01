@@ -51,6 +51,7 @@ const BrandFormModal = ({
         logo_url: "",
         description: "",
       });
+      setSelectedImage(null);
     }
   }, [initialData, isOpen]);
 
