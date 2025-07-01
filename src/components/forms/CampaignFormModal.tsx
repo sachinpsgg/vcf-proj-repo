@@ -717,11 +717,19 @@ const CampaignFormModal = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isUploadingLogo}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {isEditing ? "Update Campaign" : "Create Campaign"}
+            <Button type="submit" disabled={isUploadingLogo}>
+              {isUploadingLogo
+                ? "Uploading..."
+                : isEditing
+                  ? "Update Campaign"
+                  : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>
