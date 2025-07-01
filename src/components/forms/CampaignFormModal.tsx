@@ -464,6 +464,7 @@ const CampaignFormModal = ({
         notes: "",
         nurse_ids: [],
       });
+      setSelectedImage(null);
     }
   }, [initialData, isOpen]);
 
