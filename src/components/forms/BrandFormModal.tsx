@@ -147,6 +147,19 @@ const BrandFormModal = ({
 
       if (isEditing && initialData) {
         // Edit Brand
+        let finalLogoUrl = formData.logo_url;
+
+        // Upload new logo if selected
+        if (selectedImage) {
+          try {
+            finalLogoUrl = await uploadLogo(initialData.id);
+          } catch (logoError) {
+            console.error("Logo upload failed:", logoError);
+            toast.error("Failed to upload new logo");
+            return;
+          }
+        }
+
         const response = await fetch(
           "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/updateBrand",
           {
@@ -159,7 +172,7 @@ const BrandFormModal = ({
               brand_id: Number(initialData.id),
               brand_name: formData.name,
               description: formData.description,
-              logo_url: formData.logo_url,
+              logo_url: finalLogoUrl,
             }),
           },
         );
