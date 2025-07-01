@@ -73,6 +73,68 @@ const BrandFormModal = ({
     };
   }, [isOpen, isSubmitting, onClose]);
 
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(",")[1]); // Remove data:image/...;base64, prefix
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadLogo = async (brandId: string): Promise<string> => {
+    if (!selectedImage) throw new Error("No image selected");
+
+    setIsUploadingLogo(true);
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+      const base64Image = await convertToBase64(selectedImage);
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            brand_id: brandId,
+            base64Image: base64Image,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to upload logo");
+      }
+
+      const result = await response.json();
+      return result.logo_url;
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith("image/")) {
+        setSelectedImage(file);
+        setFormData((prev) => ({ ...prev, logo_url: file.name }));
+      } else {
+        toast.error("Please select an image file");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
