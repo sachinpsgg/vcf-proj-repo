@@ -167,39 +167,45 @@ const CampaignDetailSection = ({
 
   const handleEditCampaign = async (campaignData: CampaignPayload) => {
     try {
-      // Dummy API call for update - will be replaced with actual update endpoint later
       const storedAuth = localStorage.getItem("user");
       if (!storedAuth) throw new Error("User not authenticated");
 
       const { token } = JSON.parse(storedAuth);
 
-      console.log("Updating campaign with data:", campaignData);
+      // Extract numeric ID from campaign-{id} format
+      const numericId = campaignId.replace("campaign-", "");
 
-      // Dummy API call simulation - replace this with actual update API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const updatePayload = {
+        campaign_id: parseInt(numericId, 10),
+        name: campaignData.name,
+        start_date: campaignData.start_date,
+        end_date: campaignData.end_date,
+      };
 
-      // TODO: Replace with actual update API:
-      // const response = await fetch(`https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update/${campaign.campaign_id}`, {
-      //   method: "PUT",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify(campaignData),
-      // });
-      //
-      // if (!response.ok) {
-      //   const err = await response.json();
-      //   throw new Error(err.message || "Failed to update campaign");
-      // }
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatePayload),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to update campaign");
+      }
 
       toast.success("Campaign updated successfully");
       setIsModalOpen(false);
       refetchCampaign();
       refetchNurses();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating campaign:", error);
-      toast.error("Failed to update campaign");
+      toast.error(error.message || "Failed to update campaign");
     }
   };
 

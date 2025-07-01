@@ -69,9 +69,12 @@ export interface Campaign {
   name: string;
   logo?: string;
   brandName: string;
+  brandId: number;
   status: CampaignStatus;
   phoneNumber: string;
   notes: string;
+  startDate: string;
+  endDate: string;
   assignedNurses: { id: string; name: string; email: string }[];
   createdAt: Date;
 }
@@ -127,10 +130,13 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
       name: c.campaign_name,
       logo: c.logo_url,
       brandName: c.brand_name || `Brand ${c.brand_id}`,
+      brandId: c.brand_id,
       status: (c.campaignStatus.charAt(0).toUpperCase() +
         c.campaignStatus.slice(1)) as CampaignStatus,
       phoneNumber: c.work_number || "N/A",
       notes: c.notes,
+      startDate: c.start_date.split("T")[0], // Convert to YYYY-MM-DD format
+      endDate: c.end_date.split("T")[0],
       assignedNurses:
         c.assigned_nurses?.map((n) => ({
           id: String(n.user_id),
@@ -147,10 +153,43 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
     refetchCampaigns();
   };
 
-  const handleEditCampaign = (id: string, campaignData: any) => {
-    // TODO: Implement actual edit API call
-    toast.success("Campaign updated successfully");
-    refetchCampaigns();
+  const handleEditCampaign = async (id: string, campaignData: any) => {
+    try {
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+
+      const updatePayload = {
+        campaign_id: parseInt(id, 10),
+        name: campaignData.name,
+        start_date: campaignData.start_date,
+        end_date: campaignData.end_date,
+      };
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatePayload),
+        },
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to update campaign");
+      }
+
+      toast.success("Campaign updated successfully");
+      refetchCampaigns();
+    } catch (error: any) {
+      console.error("Error updating campaign:", error);
+      toast.error(error.message || "Failed to update campaign");
+    }
   };
 
   const handleDeleteCampaign = (id: string) => {
@@ -458,7 +497,21 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
             ? (data) => handleEditCampaign(editingCampaign.id, data)
             : handleCreateCampaign
         }
-        initialData={editingCampaign}
+        initialData={
+          editingCampaign
+            ? {
+                name: editingCampaign.name,
+                logo_url: editingCampaign.logo || "",
+                brand_id: editingCampaign.brandId,
+                start_date: editingCampaign.startDate,
+                end_date: editingCampaign.endDate,
+                notes: editingCampaign.notes,
+                nurse_ids: editingCampaign.assignedNurses.map((n) =>
+                  parseInt(n.id, 10),
+                ),
+              }
+            : null
+        }
         isEditing={!!editingCampaign}
       />
     </div>
