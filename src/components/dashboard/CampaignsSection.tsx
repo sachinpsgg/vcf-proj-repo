@@ -74,6 +74,7 @@ export interface Campaign {
 
 interface CampaignsSectionProps {
   userRole: "superAdmin" | "admin" | "nurse";
+  onNavigateToDetail?: (campaignId: string) => void;
 }
 
 // Fetch function for campaigns
@@ -100,7 +101,10 @@ const fetchCampaigns = async (): Promise<CampaignApiData[]> => {
   return data.campaigns || [];
 };
 
-const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
+const CampaignsSection = ({
+  userRole,
+  onNavigateToDetail,
+}: CampaignsSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
 
@@ -449,7 +453,7 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          (window.location.href = `/dashboard/campaign-${campaign.id}`)
+                          onNavigateToDetail?.(`campaign-${campaign.id}`)
                         }
                         className="h-8 w-8 p-0"
                         title="View campaign details"
