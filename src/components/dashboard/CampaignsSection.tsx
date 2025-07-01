@@ -17,20 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Power,
-  PowerOff,
+  Eye,
+  ExternalLink,
   Megaphone,
   Users,
   Building2,
@@ -367,14 +359,15 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
                 <TableHead>Phone</TableHead>
                 <TableHead>Assigned Nurses</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Edit</TableHead>
+                <TableHead className="text-center">Details</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {campaigns.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center py-8 text-muted-foreground"
                   >
                     No campaigns found
@@ -434,51 +427,34 @@ const CampaignsSection = ({ userRole }: CampaignsSectionProps) => {
                     <TableCell>
                       {campaign.createdAt.toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => openEditModal(campaign)}
-                            disabled={campaign.status === "Prod"}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            {campaign.status === "Prod"
-                              ? "Edit (Disabled - Production)"
-                              : "Edit"}
-                          </DropdownMenuItem>
-                          {campaign.status === "Deactivated" ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleActivateCampaign(campaign.id)
-                              }
-                            >
-                              <Power className="mr-2 h-4 w-4" />
-                              Reactivate
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleDeactivateCampaign(campaign.id)
-                              }
-                            >
-                              <PowerOff className="mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteCampaign(campaign.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(campaign)}
+                        disabled={campaign.status === "Prod"}
+                        className="h-8 w-8 p-0"
+                        title={
+                          campaign.status === "Prod"
+                            ? "Cannot edit production campaigns"
+                            : "Edit campaign"
+                        }
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          (window.location.href = `/dashboard/campaign-${campaign.id}`)
+                        }
+                        className="h-8 w-8 p-0"
+                        title="View campaign details"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
