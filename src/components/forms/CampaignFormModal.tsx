@@ -467,7 +467,6 @@ const CampaignFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(form);
 
     if (isEditing) {
       // For editing, just call the onSubmit callback (parent handles the API call)
