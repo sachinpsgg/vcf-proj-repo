@@ -650,17 +650,37 @@ const CampaignFormModal = ({
           </div>
 
           <div>
-            <Label>Logo URL</Label>
+            <Label>Campaign Logo</Label>
             <div className="flex gap-2">
               <Input
-                value={form.logo_url}
-                onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                placeholder="https://..."
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={isUploadingLogo}
+                className="flex-1"
               />
-              <Button size="icon" variant="outline">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={isUploadingLogo}
+                onClick={() =>
+                  document.querySelector('input[type="file"]')?.click()
+                }
+              >
                 <Upload className="w-4 h-4" />
               </Button>
             </div>
+            {selectedImage && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Selected: {selectedImage.name}
+              </p>
+            )}
+            {form.logo_url && !selectedImage && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Current: {form.logo_url}
+              </p>
+            )}
           </div>
 
           {/* Dates */}
