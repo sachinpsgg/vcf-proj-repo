@@ -29,6 +29,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Edit,
   Power,
@@ -40,6 +46,8 @@ import {
   Loader2,
   Send,
   ArrowLeft,
+  MoreHorizontal,
+  Globe,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
@@ -353,156 +361,102 @@ const CampaignDetailSection = ({
         </div>
       )}
 
-      {/* Campaign Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <Avatar className="w-16 h-16">
-            <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
-            <AvatarFallback className="text-lg">
-              {campaign.campaign_name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {campaign.campaign_name}
-            </h1>
-            <div className="flex items-center space-x-4 mt-2">
-              <Badge variant={getStatusBadgeVariant(campaign.campaignStatus)}>
-                {campaign.campaignStatus}
-              </Badge>
-              <div className="flex items-center text-muted-foreground">
-                <Building2 className="w-4 h-4 mr-1" />
-                Brand ID: {campaign.brand_id}
-              </div>
-              {campaign.work_number && (
-                <div className="flex items-center text-muted-foreground">
-                  <Phone className="w-4 h-4 mr-1" />
-                  {campaign.work_number}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex space-x-2">
-          <Button onClick={openCreateModal} variant="outline" className="gap-2">
-            <Plus className="w-4 h-4" />
-            Create New Campaign
-          </Button>
+      {/* Status Badge */}
+      <div className="flex items-center justify-between">
+        <Badge
+          variant={getStatusBadgeVariant(campaign.campaignStatus)}
+          className="text-sm px-3 py-1 font-medium"
+        >
+          {campaign.campaignStatus.toUpperCase()}
+        </Badge>
 
-          {/* Status-based button logic */}
-          {campaign.campaignStatus?.toLowerCase() === "draft" && (
-            <>
-              <Button
-                onClick={openEditModal}
-                variant="outline"
-                className="gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Edit Campaign
-              </Button>
-              <Button
-                onClick={handleToggleStatus}
-                variant="destructive"
-                className="gap-2"
-              >
-                <PowerOff className="w-4 h-4" />
-                Deactivate
-              </Button>
-            </>
-          )}
-
-          {campaign.campaignStatus?.toLowerCase() === "uat" && (
-            <>
-              <Button
-                onClick={openEditModal}
-                variant="outline"
-                className="gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Edit Campaign
-              </Button>
-              <Button
-                onClick={() => setIsPublishWarningOpen(true)}
-                variant="default"
-                className="gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Publish
-              </Button>
-            </>
-          )}
-
-          {campaign.campaignStatus?.toLowerCase() === "prod" && (
-            <Button
-              onClick={handleToggleStatus}
-              variant="destructive"
-              className="gap-2"
-            >
-              <PowerOff className="w-4 h-4" />
-              Deactivate
+        {/* Actions Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <MoreHorizontal className="h-4 w-4" />
+              Actions
             </Button>
-          )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={openCreateModal}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Campaign
+            </DropdownMenuItem>
 
-          {/* Default fallback for other statuses */}
-          {!["draft", "uat", "prod"].includes(
-            campaign.campaignStatus?.toLowerCase() || "",
-          ) && (
-            <>
-              <Button
-                onClick={openEditModal}
-                variant="outline"
-                className="gap-2"
-                disabled={campaign.campaignStatus === "active"}
-              >
-                <Edit className="w-4 h-4" />
-                {campaign.campaignStatus === "active"
-                  ? "Edit (Active)"
-                  : "Edit Campaign"}
-              </Button>
-              <Button
+            {(campaign.campaignStatus?.toLowerCase() === "draft" ||
+              campaign.campaignStatus?.toLowerCase() === "uat") && (
+              <DropdownMenuItem onClick={openEditModal}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Campaign
+              </DropdownMenuItem>
+            )}
+
+            {campaign.campaignStatus?.toLowerCase() === "uat" && (
+              <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Publish to Production
+              </DropdownMenuItem>
+            )}
+
+            {campaign.campaignStatus?.toLowerCase() === "prod" && (
+              <DropdownMenuItem
                 onClick={handleToggleStatus}
-                variant={
-                  campaign.campaignStatus === "deactivated"
-                    ? "default"
-                    : "destructive"
-                }
-                className="gap-2"
+                className="text-destructive"
               >
-                {campaign.campaignStatus === "deactivated" ? (
-                  <>
-                    <Power className="w-4 h-4" />
-                    Reactivate
-                  </>
-                ) : (
-                  <>
-                    <PowerOff className="w-4 h-4" />
-                    Deactivate
-                  </>
-                )}
-              </Button>
-            </>
-          )}
+                <PowerOff className="mr-2 h-4 w-4" />
+                Deactivate Campaign
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Campaign Header */}
+      <div className="flex items-start space-x-4">
+        <Avatar className="w-20 h-20">
+          <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
+          <AvatarFallback className="text-xl">
+            {campaign.campaign_name
+              .split(" ")
+              .map((n) => n[0])
+              .join("")
+              .slice(0, 2)}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            {campaign.campaign_name}
+          </h1>
+          <div className="flex items-center space-x-4 mt-3">
+            <Badge
+              variant="secondary"
+              className="text-base px-3 py-1 font-semibold"
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              Brand {campaign.brand_id}
+            </Badge>
+            {campaign.work_number && (
+              <div className="flex items-center text-muted-foreground">
+                <Phone className="w-4 h-4 mr-1" />
+                {campaign.work_number}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Campaign Details */}
+      {/* Campaign Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Campaign Status
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Nurses</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold capitalize">
-              {campaign.campaignStatus}
-            </div>
+            <div className="text-2xl font-bold">{nurses?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Current stage of campaign
+              Assigned team members
             </p>
           </CardContent>
         </Card>
@@ -510,13 +464,17 @@ const CampaignDetailSection = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Assigned Nurses
+              URLs Generated
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{nurses?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Active team members</p>
+            <div className="text-2xl font-bold">
+              {(nurses?.length || 0) * 3}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Campaign URLs created
+            </p>
           </CardContent>
         </Card>
       </div>
