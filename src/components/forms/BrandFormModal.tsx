@@ -378,12 +378,14 @@ const BrandFormModal = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isUploadingLogo}>
               {isSubmitting
                 ? "Saving..."
-                : isEditing
-                  ? "Update Brand"
-                  : "Create Brand"}
+                : isUploadingLogo
+                  ? "Uploading..."
+                  : isEditing
+                    ? "Update Brand"
+                    : "Create Brand"}
             </Button>
           </div>
         </form>
