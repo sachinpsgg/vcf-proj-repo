@@ -477,7 +477,6 @@ END:VCARD`;
 
       {/* Status Badge */}
 
-
       {/* Campaign Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
@@ -516,7 +515,6 @@ END:VCARD`;
           <Link className="w-4 h-4" />
           Generate URL
         </Button>
-      </div>
       </div>
 
       {/* Status Badge and Actions */}
