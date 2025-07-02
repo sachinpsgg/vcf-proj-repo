@@ -38,7 +38,6 @@ import {
   Globe,
   User,
   FileText,
-  Trash2,
   Edit,
   ArrowLeft,
 } from "lucide-react";
