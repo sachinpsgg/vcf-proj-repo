@@ -314,10 +314,13 @@ END:VCARD`;
             <Link className="w-4 h-4" />
             View Campaign URLs
           </Button>
-          <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-            <Link className="w-4 h-4" />
-            Generate URL
-          </Button>
+          {campaign?.campaignStatus?.toLowerCase() !== "draft" &&
+            campaign?.campaignStatus?.toLowerCase() !== "uat" && (
+              <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+                <Link className="w-4 h-4" />
+                Generate URL
+              </Button>
+            )}
         </div>
       </div>
 
