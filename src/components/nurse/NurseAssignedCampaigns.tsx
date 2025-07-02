@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -112,7 +113,7 @@ const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
   }
 
   const data = await response.json();
-  console.log(data)
+  console.log(data);
   return data.campaigns || [];
 };
 
@@ -136,11 +137,12 @@ const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
   }
 
   const data = await response.json();
-  console.log(data)
+  console.log(data);
   return data.brand;
 };
 
 const NurseAssignedCampaigns = () => {
+  const navigate = useNavigate();
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] =
@@ -289,6 +291,14 @@ END:VCARD`;
             View your assigned campaigns and generate patient URLs
           </p>
         </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate("/generated-urls")}
+          className="gap-2"
+        >
+          <Link className="w-4 h-4" />
+          View Generated URLs
+        </Button>
       </div>
 
       {/* Brand Information Card */}
