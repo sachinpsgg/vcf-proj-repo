@@ -465,14 +465,17 @@ END:VCARD`;
                     {new Date(campaign.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      onClick={() => openUrlModal(campaign)}
-                      size="sm"
-                      className="gap-2"
-                    >
-                      <Link className="w-4 h-4" />
-                      Generate URL
-                    </Button>
+                    {campaign.campaignStatus?.toLowerCase() !== "draft" &&
+                      campaign.campaignStatus?.toLowerCase() !== "uat" && (
+                        <Button
+                          onClick={() => openUrlModal(campaign)}
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Link className="w-4 h-4" />
+                          Generate URL
+                        </Button>
+                      )}
                   </TableCell>
                 </TableRow>
               ))}
