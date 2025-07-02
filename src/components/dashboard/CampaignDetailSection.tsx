@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -194,6 +195,7 @@ const CampaignDetailSection = ({
   userRole,
   onBack,
 }: CampaignDetailSectionProps) => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
@@ -511,10 +513,24 @@ END:VCARD`;
             </div>
           </div>
         </div>
-        <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-          <Link className="w-4 h-4" />
-          Generate URL
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate(
+                `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
+              )
+            }
+            className="gap-2"
+          >
+            <Link className="w-4 h-4" />
+            View Campaign URLs
+          </Button>
+          <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+            <Link className="w-4 h-4" />
+            Generate URL
+          </Button>
+        </div>
       </div>
 
       {/* Status Badge and Actions */}
