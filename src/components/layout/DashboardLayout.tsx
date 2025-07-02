@@ -252,6 +252,11 @@ const DashboardLayout = ({
       const assignedBrandsCount = 2;
       return [
         {
+          icon: Building2,
+          label: `My Brands`,
+          id: "admin-brands",
+        },
+        {
           icon: Megaphone,
           label: "Campaigns",
           id: "campaigns",
@@ -262,11 +267,6 @@ const DashboardLayout = ({
               : campaigns,
         },
         { icon: Users, label: "Nurses", id: "nurses" },
-        {
-          icon: Building2,
-          label: `My Brands (${assignedBrandsCount})`,
-          id: "admin-brands",
-        },
       ];
     } else if (userRole === "nurse") {
       // For nurse, hide campaign subitems when viewing details

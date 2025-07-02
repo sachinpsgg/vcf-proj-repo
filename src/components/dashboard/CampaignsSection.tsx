@@ -284,40 +284,40 @@ const CampaignsSection = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Campaigns
+              Total Brands
             </CardTitle>
             <Megaphone className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{campaigns.length}</div>
-            <p className="text-xs text-muted-foreground">All campaigns</p>
+            <p className="text-xs text-muted-foreground">All Brands</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Active Campaigns
+              Active Brands
             </CardTitle>
             <Power className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeCount}</div>
-            <p className="text-xs text-muted-foreground">Currently running</p>
+            <p className="text-xs text-muted-foreground">Currently Active Brand</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Patient URL Generated
+              Total Campaign
             </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{prodCount}</div>
             <p className="text-xs text-muted-foreground">
-              Total URL Generated so far
+              Total Campaign till date
             </p>
           </CardContent>
         </Card>
@@ -325,7 +325,7 @@ const CampaignsSection = ({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Assigned Nurses
+              Active Campaign
             </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
