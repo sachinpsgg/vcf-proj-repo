@@ -304,15 +304,19 @@ const CampaignFormModal = ({
     status: UserStatus;
     assignedBrands: { id: string; name: string }[];
   }) => {
-    const newNurseId = Math.max(...staticNurses.map((n) => n.user_id), 0) + 1;
-    staticNurses.push({
+    const newNurseId = Math.max(...nurses.map((n) => n.user_id), 0) + 1;
+    const newNurse: Nurse = {
       user_id: newNurseId,
       first_name: nurseData.firstName,
       last_name: nurseData.lastName,
       email: nurseData.email,
       userStatus: "active",
-    });
+      created_by: 1, // placeholder
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
+    setNurses((prev) => [...prev, newNurse]);
     setForm((prev) => ({
       ...prev,
       nurse_ids: [...prev.nurse_ids, newNurseId],
