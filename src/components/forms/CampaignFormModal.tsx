@@ -332,14 +332,14 @@ const CampaignFormModal = ({
   };
 
   const getAvailableNurses = () =>
-    staticNurses.filter(
+    nurses.filter(
       (nurse) =>
         !form.nurse_ids.includes(nurse.user_id) &&
         nurse.userStatus === "active",
     );
 
   const getAssignedNurses = () =>
-    staticNurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
+    nurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
 
   const createCampaign = async (campaignData: CampaignPayload) => {
     const userString = localStorage.getItem("user");
