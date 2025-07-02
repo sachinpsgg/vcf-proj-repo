@@ -865,24 +865,6 @@ END:VCARD`;
                 rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="logo">Logo (optional)</Label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="pl-10"
-                />
-              </div>
-              {formData.logo && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {formData.logo.name}
-                </p>
-              )}
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={resetUrlForm}>
