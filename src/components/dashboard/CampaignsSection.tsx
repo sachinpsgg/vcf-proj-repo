@@ -72,8 +72,6 @@ export interface Campaign {
   status: CampaignStatus;
   phoneNumber: string;
   notes: string;
-  startDate: string;
-  endDate: string;
   assignedNurses: { id: string; name: string; email: string }[];
   createdAt: Date;
 }
@@ -140,8 +138,6 @@ const CampaignsSection = ({
         c.campaignStatus.slice(1)) as CampaignStatus,
       phoneNumber: c.work_number || "N/A",
       notes: c.notes,
-      startDate: c.start_date.split("T")[0], // Convert to YYYY-MM-DD format
-      endDate: c.end_date.split("T")[0],
       assignedNurses:
         c.assigned_nurses?.map((n) => ({
           id: String(n.user_id),
@@ -167,8 +163,7 @@ const CampaignsSection = ({
   });
 
   const handleCreateCampaign = (campaignData: any) => {
-    // The actual API call is handled inside CampaignFormModal
-    // This callback is triggered after successful creation
+    console.log(campaignData)
     toast.success("Campaign created successfully");
     refetchCampaigns();
   };
@@ -562,8 +557,6 @@ const CampaignsSection = ({
                 name: editingCampaign.name,
                 logo_url: editingCampaign.logo || "",
                 brand_id: editingCampaign.brandId,
-                start_date: editingCampaign.startDate,
-                end_date: editingCampaign.endDate,
                 notes: editingCampaign.notes,
                 nurse_ids: editingCampaign.assignedNurses.map((n) =>
                   parseInt(n.id, 10),

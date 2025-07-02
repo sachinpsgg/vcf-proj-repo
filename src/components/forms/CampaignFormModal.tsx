@@ -139,6 +139,7 @@ const CampaignFormModal = ({
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log(file)
     if (file) {
       if (file.type.startsWith("image/")) {
         setSelectedImage(file);
@@ -205,11 +206,9 @@ const CampaignFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Static data handling - just call the parent callback
     let finalLogoUrl = form.logo_url;
     if (selectedImage) {
-      finalLogoUrl = URL.createObjectURL(selectedImage); // Create a local URL for display
+      finalLogoUrl = URL.createObjectURL(selectedImage);
     }
 
     onSubmit({
@@ -298,9 +297,9 @@ const CampaignFormModal = ({
                 Selected: {selectedImage.name}
               </p>
             )}
-            {form.logo_url && !selectedImage && (
+            {/*{form.logo_url && !selectedImage && (*/}
               <img src={form.logo_url}/>
-            )}
+            {/*)}*/}
           </div>
 
           <div>
