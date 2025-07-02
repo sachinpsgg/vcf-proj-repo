@@ -526,18 +526,6 @@ const GeneratedURLs = () => {
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>
-                        {(user?.role === "superAdmin" ||
-                          user?.role === "admin") && (
-                          <Button
-                            onClick={() => handleDeleteUrl(urlData.id)}
-                            size="sm"
-                            variant="outline"
-                            title="Delete URL"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
