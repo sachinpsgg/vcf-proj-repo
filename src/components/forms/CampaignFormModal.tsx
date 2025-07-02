@@ -380,7 +380,7 @@ const CampaignFormModal = ({
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
       {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
