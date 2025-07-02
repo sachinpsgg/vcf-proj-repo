@@ -613,9 +613,19 @@ const CampaignFormModal = ({
                   <Select
                     value={selectedNurse}
                     onValueChange={setSelectedNurse}
+                    disabled={isLoadingNurses}
                   >
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a nurse" />
+                      <SelectValue
+                        placeholder={
+                          isLoadingNurses
+                            ? "Loading nurses..."
+                            : "Select a nurse"
+                        }
+                      />
+                      {isLoadingNurses && (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
                       {getAvailableNurses().map((nurse) => (
