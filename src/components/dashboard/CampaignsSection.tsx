@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +35,7 @@ import {
   Users,
   Building2,
   Loader2,
+  Link,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import { toast } from "sonner";
@@ -109,6 +111,7 @@ const CampaignsSection = ({
   userRole,
   onNavigateToDetail,
 }: CampaignsSectionProps) => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [brandFilter, setBrandFilter] = useState<string>("all");
@@ -163,48 +166,14 @@ const CampaignsSection = ({
   });
 
   const handleCreateCampaign = (campaignData: any) => {
-    console.log(campaignData)
-    toast.success("Campaign created successfully");
+    // The API call is now handled inside the modal
+    console.log(campaignData);
     refetchCampaigns();
   };
 
   const handleEditCampaign = async (id: string, campaignData: any) => {
-    try {
-      const storedAuth = localStorage.getItem("user");
-      if (!storedAuth) throw new Error("User not authenticated");
-
-      const { token } = JSON.parse(storedAuth);
-
-      const updatePayload = {
-        campaign_id: parseInt(id, 10),
-        name: campaignData.name,
-        start_date: campaignData.start_date,
-        end_date: campaignData.end_date,
-      };
-
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Failed to update campaign");
-      }
-
-      toast.success("Campaign updated successfully");
-      refetchCampaigns();
-    } catch (error: any) {
-      console.error("Error updating campaign:", error);
-      toast.error(error.message || "Failed to update campaign");
-    }
+    // The API call is now handled inside the modal
+    refetchCampaigns();
   };
 
   const handleDeleteCampaign = (id: string) => {
@@ -301,10 +270,20 @@ const CampaignsSection = ({
             Create and manage marketing campaigns with nurse assignments
           </p>
         </div>
-        <Button onClick={openCreateModal} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Create Campaign
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/generated-urls")}
+            className="gap-2"
+          >
+            <Link className="w-4 h-4" />
+            View Generated URLs
+          </Button>
+          <Button onClick={openCreateModal} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Create Campaign
+          </Button>
+        </div>
       </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -343,7 +322,9 @@ const CampaignsSection = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{prodCount}</div>
-            <p className="text-xs text-muted-foreground">Total URL Generated so far</p>
+            <p className="text-xs text-muted-foreground">
+              Total URL Generated so far
+            </p>
           </CardContent>
         </Card>
 

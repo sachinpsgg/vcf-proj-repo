@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,8 +41,11 @@ interface CampaignPayload {
   name: string;
   logo_url: string;
   brand_id: number;
+  campaign_url: string;
   notes: string;
   nurse_ids: number[];
+  work_number: string;
+  campaign_id?: number; // For updates
 }
 
 // Static data for brands and nurses
@@ -109,41 +111,115 @@ const CampaignFormModal = ({
     name: "",
     logo_url: "",
     brand_id: 0,
+    campaign_url: "",
     notes: "",
     nurse_ids: [],
+    work_number: "",
   });
 
   const [selectedNurse, setSelectedNurse] = useState<string>("");
   const [isNurseModalOpen, setIsNurseModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setForm({
-        ...initialData,
+        campaign_id: initialData.campaign_id || undefined,
+        name: initialData.name || "",
+        logo_url: initialData.logo_url || "",
+        brand_id: initialData.brand_id || 0,
+        campaign_url: initialData.campaign_url || "",
+        notes: initialData.notes || "",
         nurse_ids: initialData.nurse_ids || [],
+        work_number: initialData.work_number || "",
       });
+      // Set image preview if there's an existing logo URL
+      if (initialData.logo_url) {
+        setImagePreview(initialData.logo_url);
+      } else {
+        setImagePreview("");
+      }
     } else {
       setForm({
         name: "",
         logo_url: "",
         brand_id: 0,
+        campaign_url: "",
         notes: "",
         nurse_ids: [],
+        work_number: "",
       });
       setSelectedImage(null);
+      setImagePreview("");
     }
     setSelectedNurse("");
     setIsNurseModalOpen(false);
+    setIsUploadingImage(false);
   }, [initialData, isOpen]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:image/...;base64, prefix
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadBrandLogo = async (
+    base64Image: string,
+    brandId: number,
+  ): Promise<string> => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          brand_id: brandId.toString(),
+          base64Image: base64Image,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Upload failed" }));
+      throw new Error(errorData.message || "Failed to upload logo");
+    }
+
+    const data = await response.json();
+    return data.logo_url;
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log(file)
     if (file) {
       if (file.type.startsWith("image/")) {
         setSelectedImage(file);
-        setForm((prev) => ({ ...prev, logo_url: file.name }));
+
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
       } else {
         toast.error("Please select an image file");
       }
@@ -204,24 +280,127 @@ const CampaignFormModal = ({
   const getAssignedNurses = () =>
     staticNurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    let finalLogoUrl = form.logo_url;
-    if (selectedImage) {
-      finalLogoUrl = URL.createObjectURL(selectedImage);
+  const createCampaign = async (campaignData: CampaignPayload) => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
     }
 
-    onSubmit({
-      ...form,
-      logo_url: finalLogoUrl,
-    });
+    const user = JSON.parse(userString);
+    const token = user.token;
 
-    onClose();
-    toast.success(
-      isEditing
-        ? "Campaign updated successfully!"
-        : "Campaign created successfully!",
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: campaignData.name,
+          logo_url: campaignData.logo_url,
+          brand_id: campaignData.brand_id,
+          campaign_url: campaignData.campaign_url,
+          notes: campaignData.notes,
+          nurse_ids: campaignData.nurse_ids,
+          work_number: campaignData.work_number,
+        }),
+      },
     );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Create failed" }));
+      throw new Error(errorData.message || "Failed to create campaign");
+    }
+
+    return await response.json();
+  };
+
+  const updateCampaign = async (campaignData: CampaignPayload) => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          campaign_id: campaignData.campaign_id,
+          name: campaignData.name,
+          logo_url: campaignData.logo_url,
+          brand_id: campaignData.brand_id,
+          campaign_url: campaignData.campaign_url,
+          notes: campaignData.notes,
+          nurse_ids: campaignData.nurse_ids,
+          work_number: campaignData.work_number,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Update failed" }));
+      throw new Error(errorData.message || "Failed to update campaign");
+    }
+
+    return await response.json();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (form.brand_id === 0) {
+      toast.error("Please select a brand");
+      return;
+    }
+
+    let finalLogoUrl = form.logo_url;
+
+    try {
+      // If there's a new image selected, upload it first
+      if (selectedImage) {
+        setIsUploadingImage(true);
+        const base64Image = await convertToBase64(selectedImage);
+        finalLogoUrl = await uploadBrandLogo(base64Image, form.brand_id);
+        toast.success("Logo uploaded successfully!");
+      }
+
+      const campaignData = {
+        ...form,
+        logo_url: finalLogoUrl,
+      };
+
+      if (isEditing) {
+        await updateCampaign(campaignData);
+        toast.success("Campaign updated successfully!");
+      } else {
+        await createCampaign(campaignData);
+        toast.success("Campaign created successfully!");
+      }
+
+      onSubmit(campaignData);
+      onClose();
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+          `Failed to ${isEditing ? "update" : "create"} campaign`,
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -245,7 +424,7 @@ const CampaignFormModal = ({
               <Label>Campaign Name</Label>
               <Input
                 required
-                value={form.name}
+                value={form.name || ""}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Enter campaign name"
               />
@@ -253,9 +432,9 @@ const CampaignFormModal = ({
             <div>
               <Label>Brand</Label>
               <Select
-                value={String(form.brand_id)}
+                value={String(form.brand_id || 0)}
                 onValueChange={(v) =>
-                  setForm({ ...form, brand_id: parseInt(v, 10) })
+                  setForm({ ...form, brand_id: parseInt(v, 10) || 0 })
                 }
               >
                 <SelectTrigger>
@@ -272,41 +451,83 @@ const CampaignFormModal = ({
             </div>
           </div>
 
+          {/* Campaign URL and Work Number */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Campaign URL</Label>
+              <Input
+                value={form.campaign_url || ""}
+                onChange={(e) =>
+                  setForm({ ...form, campaign_url: e.target.value })
+                }
+                placeholder="https://example.com/campaign"
+              />
+            </div>
+            <div>
+              <Label>Work Phone Number</Label>
+              <Input
+                type="tel"
+                value={form.work_number || ""}
+                onChange={(e) =>
+                  setForm({ ...form, work_number: e.target.value })
+                }
+                placeholder="1234567890"
+              />
+            </div>
+          </div>
+
           <div>
             <Label>Campaign Logo</Label>
-            <div className="flex gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={() =>
-                  document.querySelector('input[type="file"]')?.click()
-                }
-              >
-                <Upload className="w-4 h-4" />
-              </Button>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
+                  disabled={isUploadingImage}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() =>
+                    document.querySelector('input[type="file"]')?.click()
+                  }
+                  disabled={isUploadingImage}
+                >
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedImage.name}
+                </p>
+              )}
+
+              {isUploadingImage && (
+                <p className="text-sm text-blue-600">Uploading logo...</p>
+              )}
+
+              {imagePreview && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                  <img
+                    src={imagePreview}
+                    alt="Logo preview"
+                    className="w-32 h-32 object-contain border border-gray-200 rounded-lg"
+                  />
+                </div>
+              )}
             </div>
-            {selectedImage && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Selected: {selectedImage.name}
-              </p>
-            )}
-            {/*{form.logo_url && !selectedImage && (*/}
-              <img src={form.logo_url}/>
-            {/*)}*/}
           </div>
 
           <div>
             <Label>Notes</Label>
             <Textarea
               rows={3}
-              value={form.notes}
+              value={form.notes || ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Campaign description and notes..."
             />
@@ -385,11 +606,19 @@ const CampaignFormModal = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isUploadingImage}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {isEditing ? "Update Campaign" : "Create Campaign"}
+            <Button type="submit" disabled={isUploadingImage}>
+              {isUploadingImage
+                ? "Uploading..."
+                : isEditing
+                  ? "Update Campaign"
+                  : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>

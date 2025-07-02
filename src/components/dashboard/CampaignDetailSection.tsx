@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +30,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -48,6 +60,13 @@ import {
   ArrowLeft,
   MoreHorizontal,
   Globe,
+  Link,
+  User,
+  Upload,
+  Copy,
+  Download,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
@@ -85,11 +104,35 @@ interface NurseApiData {
 }
 
 interface CampaignPayload {
+  campaign_id?: number;
   name: string;
   logo_url: string;
   brand_id: number;
+  campaign_url: string;
   notes: string;
   nurse_ids: number[];
+  work_number: string;
+}
+
+interface GeneratedURL {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  doctorPhone: string;
+  doctorName: string;
+  description: string;
+  logo: string;
+  patientUrl: string;
+  vcfUrl: string;
+  generatedAt: Date;
+  isActive: boolean;
+}
+
+interface URLFormData {
+  doctorPhone: string;
+  doctorName: string;
+  description: string;
+  logo: File | null;
 }
 
 // Fetch functions
@@ -155,9 +198,18 @@ const CampaignDetailSection = ({
   userRole,
   onBack,
 }: CampaignDetailSectionProps) => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
+  const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
+  const [formData, setFormData] = useState<URLFormData>({
+    doctorPhone: "",
+    doctorName: "",
+    description: "",
+    logo: null,
+  });
 
   // Fetch campaign data
   const {
@@ -184,55 +236,83 @@ const CampaignDetailSection = ({
   });
 
   const handleEditCampaign = async (campaignData: CampaignPayload) => {
-    try {
-      const storedAuth = localStorage.getItem("user");
-      if (!storedAuth) throw new Error("User not authenticated");
-
-      const { token } = JSON.parse(storedAuth);
-
-      // Extract numeric ID from campaign-{id} format
-      const numericId = campaignId.replace("campaign-", "");
-
-      const updatePayload = {
-        campaign_id: parseInt(numericId, 10),
-        name: campaignData.name,
-        notes: campaignData.notes,
-      };
-
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Failed to update campaign");
-      }
-
-      toast.success("Campaign updated successfully");
-      setIsModalOpen(false);
-      refetchCampaign();
-      refetchNurses();
-    } catch (error: any) {
-      console.error("Error updating campaign:", error);
-      toast.error(error.message || "Failed to update campaign");
-    }
+    // The API call is now handled inside the modal
+    setIsModalOpen(false);
+    refetchCampaign();
+    refetchNurses();
   };
 
   const handleCreateCampaign = (campaignData: CampaignPayload) => {
-    // The actual API call is handled inside CampaignFormModal
-    // This callback is triggered after successful creation
-    toast.success("Campaign created successfully! Refreshing data...");
+    // The API call is now handled inside the modal
     setIsModalOpen(false);
-    // Optionally refetch data if needed
     refetchCampaign();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setFormData((prev) => ({ ...prev, logo: file }));
+  };
+
+  const generateVCFContent = (data: URLFormData, campaign: CampaignApiData) => {
+    return `BEGIN:VCARD
+VERSION:3.0
+FN:${data.doctorName}
+TEL:${data.doctorPhone}
+NOTE:${data.description}
+ORG:Brand ${campaign.brand_id}
+TITLE:${campaign.campaign_name}
+END:VCARD`;
+  };
+
+  const handleGenerateUrl = () => {
+    if (!formData.doctorPhone || !formData.doctorName || !campaign) return;
+
+    const vcfContent = generateVCFContent(formData, campaign);
+    const vcfBlob = new Blob([vcfContent], { type: "text/vcard" });
+    const vcfUrl = URL.createObjectURL(vcfBlob);
+
+    const newUrl: GeneratedURL = {
+      id: Date.now().toString(),
+      campaignId: campaign.campaign_id.toString(),
+      campaignName: campaign.campaign_name,
+      doctorPhone: formData.doctorPhone,
+      doctorName: formData.doctorName,
+      description: formData.description,
+      logo: formData.logo ? URL.createObjectURL(formData.logo) : "",
+      patientUrl: `https://medflow.app/patient/${Math.random().toString(36).substring(7)}`,
+      vcfUrl,
+      generatedAt: new Date(),
+      isActive: true,
+    };
+
+    setGeneratedUrls([newUrl, ...generatedUrls]);
+    toast.success("Patient URL generated successfully!");
+    resetUrlForm();
+  };
+
+  const resetUrlForm = () => {
+    setFormData({
+      doctorPhone: "",
+      doctorName: "",
+      description: "",
+      logo: null,
+    });
+    setIsUrlModalOpen(false);
+  };
+
+  const handleCopyUrl = (url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success("URL copied to clipboard!");
+  };
+
+  const handleDownloadVCF = (url: GeneratedURL) => {
+    const link = document.createElement("a");
+    link.href = url.vcfUrl;
+    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("VCF card downloaded!");
   };
 
   const handleToggleStatus = () => {
@@ -302,11 +382,14 @@ const CampaignDetailSection = ({
     campaign: CampaignApiData,
   ): CampaignPayload => {
     return {
+      campaign_id: campaign.campaign_id,
       name: campaign.campaign_name,
       logo_url: campaign.logo_url,
       brand_id: campaign.brand_id,
+      campaign_url: campaign.campaign_url || "",
       notes: campaign.notes,
       nurse_ids: nurses?.map((nurse) => nurse.user_id) || [],
+      work_number: campaign.work_number || "",
     };
   };
 
@@ -363,89 +446,107 @@ const CampaignDetailSection = ({
 
       {/* Status Badge */}
 
-
       {/* Campaign Header */}
-      <div className="flex items-start space-x-4">
-        <Avatar className="w-20 h-20">
-          <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
-          <AvatarFallback className="text-xl">
-            {campaign.campaign_name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .slice(0, 2)}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {campaign.campaign_name}
-          </h1>
-          <div className="flex items-center space-x-4 mt-3">
-            <Badge
-              variant="secondary"
-              className="text-base px-3 py-1 font-semibold"
-            >
-              <Building2 className="w-4 h-4 mr-2" />
-              Brand {campaign.brand_id}
-            </Badge>
-            {campaign.work_number && (
-              <div className="flex items-center text-muted-foreground">
-                <Phone className="w-4 h-4 mr-1" />
-                {campaign.work_number}
-              </div>
-            )}
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-4">
+          <Avatar className="w-20 h-20">
+            <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
+            <AvatarFallback className="text-xl">
+              {campaign.campaign_name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {campaign.campaign_name}
+            </h1>
+            <div className="flex items-center space-x-4 mt-3">
+              <Badge
+                variant="secondary"
+                className="text-base px-3 py-1 font-semibold"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                Brand {campaign.brand_id}
+              </Badge>
+              {campaign.work_number && (
+                <div className="flex items-center text-muted-foreground">
+                  <Phone className="w-4 h-4 mr-1" />
+                  {campaign.work_number}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <Badge
-            variant={getStatusBadgeVariant(campaign.campaignStatus)}
-            className="text-sm px-3 py-1 font-medium"
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate(
+                `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
+              )
+            }
+            className="gap-2"
           >
-            {campaign.campaignStatus.toUpperCase()}
-          </Badge>
-          <div className="flex items-center justify-center min-w-[40px] ml-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <MoreHorizontal className="h-4 w-4" />
-                  Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={openCreateModal}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New Campaign
-                </DropdownMenuItem>
-
-                {(campaign.campaignStatus?.toLowerCase() === "draft" ||
-                  campaign.campaignStatus?.toLowerCase() === "uat") && (
-                  <DropdownMenuItem onClick={openEditModal}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit Campaign
-                  </DropdownMenuItem>
-                )}
-
-                {campaign.campaignStatus?.toLowerCase() === "uat" && (
-                  <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
-                    <Send className="mr-2 h-4 w-4" />
-                    Publish to Production
-                  </DropdownMenuItem>
-                )}
-
-                {campaign.campaignStatus?.toLowerCase() === "prod" && (
-                  <DropdownMenuItem
-                    onClick={handleToggleStatus}
-                    className="text-destructive"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate Campaign
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
+            <Link className="w-4 h-4" />
+            View Campaign URLs
+          </Button>
+          <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+            <Link className="w-4 h-4" />
+            Generate URL
+          </Button>
         </div>
+      </div>
+
+      {/* Status Badge and Actions */}
+      <div className="flex items-center justify-between">
+        <Badge
+          variant={getStatusBadgeVariant(campaign.campaignStatus)}
+          className="text-sm px-3 py-1 font-medium"
+        >
+          {campaign.campaignStatus.toUpperCase()}
+        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <MoreHorizontal className="h-4 w-4" />
+              Actions
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={openCreateModal}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Campaign
+            </DropdownMenuItem>
+
+            {(campaign.campaignStatus?.toLowerCase() === "draft" ||
+              campaign.campaignStatus?.toLowerCase() === "uat") && (
+              <DropdownMenuItem onClick={openEditModal}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Campaign
+              </DropdownMenuItem>
+            )}
+
+            {campaign.campaignStatus?.toLowerCase() === "uat" && (
+              <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Publish to Production
+              </DropdownMenuItem>
+            )}
+
+            {campaign.campaignStatus?.toLowerCase() === "prod" && (
+              <DropdownMenuItem
+                onClick={handleToggleStatus}
+                className="text-destructive"
+              >
+                <PowerOff className="mr-2 h-4 w-4" />
+                Deactivate Campaign
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Campaign Statistics */}
@@ -488,6 +589,113 @@ const CampaignDetailSection = ({
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">{campaign.notes}</p>
+        </CardContent>
+      </Card>
+
+      {/* Generated URLs Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Generated Patient URLs</CardTitle>
+          <CardDescription>
+            Track and manage URLs generated for this campaign
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Doctor Info</TableHead>
+                <TableHead>Patient URL</TableHead>
+                <TableHead>Generated</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {generatedUrls.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    No URLs generated yet
+                  </TableCell>
+                </TableRow>
+              ) : (
+                generatedUrls.map((urlData) => (
+                  <TableRow key={urlData.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        {urlData.logo && (
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage
+                              src={urlData.logo}
+                              alt={urlData.doctorName}
+                            />
+                            <AvatarFallback>
+                              {urlData.doctorName.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div>
+                          <div className="font-medium">
+                            {urlData.doctorName}
+                          </div>
+                          <div className="text-sm text-muted-foreground font-mono">
+                            {urlData.doctorPhone}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
+                          {urlData.patientUrl}
+                        </code>
+                        <Button
+                          onClick={() => handleCopyUrl(urlData.patientUrl)}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {urlData.generatedAt.toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={urlData.isActive ? "default" : "secondary"}
+                      >
+                        {urlData.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          onClick={() => handleDownloadVCF(urlData)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            window.open(urlData.patientUrl, "_blank")
+                          }
+                          size="sm"
+                          variant="outline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -582,6 +790,112 @@ const CampaignDetailSection = ({
         }
         isEditing={isEditing}
       />
+
+      {/* Generate URL Modal */}
+      <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Patient URL</DialogTitle>
+            <DialogDescription>
+              Create a unique URL and VCF card for a patient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Campaign</Label>
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="font-medium">{campaign.campaign_name}</div>
+                <div className="text-sm text-muted-foreground">
+                  Brand {campaign.brand_id}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="doctorName">Doctor's Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="doctorName"
+                  placeholder="Dr. John Smith"
+                  value={formData.doctorName}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      doctorName: e.target.value,
+                    }))
+                  }
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="doctorPhone">Doctor's Phone Number</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="doctorPhone"
+                  type="tel"
+                  placeholder="+1 (555) 123-4567"
+                  value={formData.doctorPhone}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      doctorPhone: e.target.value,
+                    }))
+                  }
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Additional information about the doctor or clinic"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logo">Logo (optional)</Label>
+              <div className="relative">
+                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="pl-10"
+                />
+              </div>
+              {formData.logo && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {formData.logo.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetUrlForm}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerateUrl}
+              disabled={!formData.doctorPhone || !formData.doctorName}
+              className="gap-2"
+            >
+              <Link className="w-4 h-4" />
+              Generate URL
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Publish Warning Alert Dialog */}
       <AlertDialog
