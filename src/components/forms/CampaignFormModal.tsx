@@ -96,6 +96,12 @@ const CampaignFormModal = ({
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  // API data states
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [nurses, setNurses] = useState<Nurse[]>([]);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
+  const [isLoadingNurses, setIsLoadingNurses] = useState(false);
+
   useEffect(() => {
     if (initialData) {
       setForm({
