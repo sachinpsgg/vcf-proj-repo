@@ -126,12 +126,20 @@ const CampaignFormModal = ({
   useEffect(() => {
     if (initialData) {
       setForm({
-        ...initialData,
+        campaign_id: initialData.campaign_id || undefined,
+        name: initialData.name || "",
+        logo_url: initialData.logo_url || "",
+        brand_id: initialData.brand_id || 0,
+        campaign_url: initialData.campaign_url || "",
+        notes: initialData.notes || "",
         nurse_ids: initialData.nurse_ids || [],
+        work_number: initialData.work_number || "",
       });
       // Set image preview if there's an existing logo URL
       if (initialData.logo_url) {
         setImagePreview(initialData.logo_url);
+      } else {
+        setImagePreview("");
       }
     } else {
       setForm({
@@ -416,7 +424,7 @@ const CampaignFormModal = ({
               <Label>Campaign Name</Label>
               <Input
                 required
-                value={form.name}
+                value={form.name || ""}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Enter campaign name"
               />
@@ -424,9 +432,9 @@ const CampaignFormModal = ({
             <div>
               <Label>Brand</Label>
               <Select
-                value={String(form.brand_id)}
+                value={String(form.brand_id || 0)}
                 onValueChange={(v) =>
-                  setForm({ ...form, brand_id: parseInt(v, 10) })
+                  setForm({ ...form, brand_id: parseInt(v, 10) || 0 })
                 }
               >
                 <SelectTrigger>
@@ -519,7 +527,7 @@ const CampaignFormModal = ({
             <Label>Notes</Label>
             <Textarea
               rows={3}
-              value={form.notes}
+              value={form.notes || ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Campaign description and notes..."
             />
