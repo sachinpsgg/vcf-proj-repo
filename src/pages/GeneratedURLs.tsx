@@ -205,11 +205,6 @@ const GeneratedURLs = () => {
     toast.success("URL status updated!");
   };
 
-  const handleDeleteUrl = (urlId: string) => {
-    setGeneratedUrls((urls) => urls.filter((url) => url.id !== urlId));
-    toast.success("URL deleted successfully!");
-  };
-
   const getStatusStats = () => {
     // Use filtered URLs if viewing specific campaign, otherwise all URLs
     const urlsToCount = campaignId
