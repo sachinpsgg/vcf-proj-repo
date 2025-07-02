@@ -549,6 +549,17 @@ const GeneratedURLs = () => {
       </Card>
     </div>
   );
+
+  return (
+    <DashboardLayout
+      userRole={user.role}
+      userEmail={user.email}
+      activeSection="generated-urls"
+      onSectionChange={() => {}}
+    >
+      {renderContent()}
+    </DashboardLayout>
+  );
 };
 
 export default GeneratedURLs;
