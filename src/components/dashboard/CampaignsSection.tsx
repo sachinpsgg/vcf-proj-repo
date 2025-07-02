@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +35,7 @@ import {
   Users,
   Building2,
   Loader2,
+  Link,
 } from "lucide-react";
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import { toast } from "sonner";
@@ -163,7 +165,7 @@ const CampaignsSection = ({
   });
 
   const handleCreateCampaign = (campaignData: any) => {
-    console.log(campaignData)
+    console.log(campaignData);
     toast.success("Campaign created successfully");
     refetchCampaigns();
   };
@@ -301,10 +303,20 @@ const CampaignsSection = ({
             Create and manage marketing campaigns with nurse assignments
           </p>
         </div>
-        <Button onClick={openCreateModal} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Create Campaign
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate("/generated-urls")}
+            className="gap-2"
+          >
+            <Link className="w-4 h-4" />
+            View Generated URLs
+          </Button>
+          <Button onClick={openCreateModal} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Create Campaign
+          </Button>
+        </div>
       </div>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -343,7 +355,9 @@ const CampaignsSection = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{prodCount}</div>
-            <p className="text-xs text-muted-foreground">Total URL Generated so far</p>
+            <p className="text-xs text-muted-foreground">
+              Total URL Generated so far
+            </p>
           </CardContent>
         </Card>
 
