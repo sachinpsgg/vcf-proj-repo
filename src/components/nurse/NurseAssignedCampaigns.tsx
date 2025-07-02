@@ -485,7 +485,7 @@ END:VCARD`;
       {generatedUrls.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Generated Patient URLs</CardTitle>
+            <CardTitle>Generated Contact cards</CardTitle>
             <CardDescription>
               Track and manage URLs you've generated for patients
             </CardDescription>
