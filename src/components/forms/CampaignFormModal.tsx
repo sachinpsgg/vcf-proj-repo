@@ -41,8 +41,11 @@ interface CampaignPayload {
   name: string;
   logo_url: string;
   brand_id: number;
+  campaign_url: string;
   notes: string;
   nurse_ids: number[];
+  work_number: string;
+  campaign_id?: number; // For updates
 }
 
 // Static data for brands and nurses
@@ -108,8 +111,10 @@ const CampaignFormModal = ({
     name: "",
     logo_url: "",
     brand_id: 0,
+    campaign_url: "",
     notes: "",
     nurse_ids: [],
+    work_number: "",
   });
 
   const [selectedNurse, setSelectedNurse] = useState<string>("");
@@ -133,8 +138,10 @@ const CampaignFormModal = ({
         name: "",
         logo_url: "",
         brand_id: 0,
+        campaign_url: "",
         notes: "",
         nurse_ids: [],
+        work_number: "",
       });
       setSelectedImage(null);
       setImagePreview("");
@@ -265,6 +272,85 @@ const CampaignFormModal = ({
   const getAssignedNurses = () =>
     staticNurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
 
+  const createCampaign = async (campaignData: CampaignPayload) => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: campaignData.name,
+          logo_url: campaignData.logo_url,
+          brand_id: campaignData.brand_id,
+          campaign_url: campaignData.campaign_url,
+          notes: campaignData.notes,
+          nurse_ids: campaignData.nurse_ids,
+          work_number: campaignData.work_number,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Create failed" }));
+      throw new Error(errorData.message || "Failed to create campaign");
+    }
+
+    return await response.json();
+  };
+
+  const updateCampaign = async (campaignData: CampaignPayload) => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          campaign_id: campaignData.campaign_id,
+          name: campaignData.name,
+          logo_url: campaignData.logo_url,
+          brand_id: campaignData.brand_id,
+          campaign_url: campaignData.campaign_url,
+          notes: campaignData.notes,
+          nurse_ids: campaignData.nurse_ids,
+          work_number: campaignData.work_number,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Update failed" }));
+      throw new Error(errorData.message || "Failed to update campaign");
+    }
+
+    return await response.json();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -284,19 +370,26 @@ const CampaignFormModal = ({
         toast.success("Logo uploaded successfully!");
       }
 
-      onSubmit({
+      const campaignData = {
         ...form,
         logo_url: finalLogoUrl,
-      });
+      };
 
+      if (isEditing) {
+        await updateCampaign(campaignData);
+        toast.success("Campaign updated successfully!");
+      } else {
+        await createCampaign(campaignData);
+        toast.success("Campaign created successfully!");
+      }
+
+      onSubmit(campaignData);
       onClose();
-      toast.success(
-        isEditing
-          ? "Campaign updated successfully!"
-          : "Campaign created successfully!",
-      );
     } catch (error: any) {
-      toast.error(error.message || "Failed to upload logo");
+      toast.error(
+        error.message ||
+          `Failed to ${isEditing ? "update" : "create"} campaign`,
+      );
     } finally {
       setIsUploadingImage(false);
     }
@@ -347,6 +440,31 @@ const CampaignFormModal = ({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Campaign URL and Work Number */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Campaign URL</Label>
+              <Input
+                value={form.campaign_url}
+                onChange={(e) =>
+                  setForm({ ...form, campaign_url: e.target.value })
+                }
+                placeholder="https://example.com/campaign"
+              />
+            </div>
+            <div>
+              <Label>Work Phone Number</Label>
+              <Input
+                type="tel"
+                value={form.work_number}
+                onChange={(e) =>
+                  setForm({ ...form, work_number: e.target.value })
+                }
+                placeholder="1234567890"
+              />
             </div>
           </div>
 
