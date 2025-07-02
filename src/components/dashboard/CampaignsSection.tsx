@@ -111,6 +111,7 @@ const CampaignsSection = ({
   userRole,
   onNavigateToDetail,
 }: CampaignsSectionProps) => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [brandFilter, setBrandFilter] = useState<string>("all");
