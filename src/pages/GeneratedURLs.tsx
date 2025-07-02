@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,11 +38,17 @@ import {
   Globe,
   User,
   FileText,
-  Trash2,
   Edit,
   ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { UserRole } from "./Login";
+
+interface User {
+  email: string;
+  role: UserRole;
+  isAuthenticated: boolean;
+}
 
 interface GeneratedURL {
   id: string;
@@ -114,6 +121,7 @@ const GeneratedURLs = () => {
   const campaignId = searchParams.get("campaignId");
   const campaignName = searchParams.get("campaignName");
 
+  const [user, setUser] = useState<User | null>(null);
   const [generatedUrls, setGeneratedUrls] =
     useState<GeneratedURL[]>(mockGeneratedUrls);
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,23 +129,28 @@ const GeneratedURLs = () => {
   const [campaignFilter, setCampaignFilter] = useState<string>(
     campaignId || "all",
   );
-  const [userRole, setUserRole] = useState<"superAdmin" | "admin" | "nurse">(
-    "admin",
-  );
 
   useEffect(() => {
-    // Get user role from localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setUserRole(user.role || "nurse");
+    // Check authentication
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      navigate("/");
+      return;
     }
+
+    const parsedUser = JSON.parse(userData);
+    if (!parsedUser.isAuthenticated) {
+      navigate("/");
+      return;
+    }
+
+    setUser(parsedUser);
 
     // Set campaign filter if coming from specific campaign
     if (campaignId) {
       setCampaignFilter(campaignId);
     }
-  }, [campaignId]);
+  }, [campaignId, navigate]);
 
   // Filter URLs based on search term and filters
   const filteredUrls = generatedUrls.filter((url) => {
@@ -191,11 +204,6 @@ const GeneratedURLs = () => {
     toast.success("URL status updated!");
   };
 
-  const handleDeleteUrl = (urlId: string) => {
-    setGeneratedUrls((urls) => urls.filter((url) => url.id !== urlId));
-    toast.success("URL deleted successfully!");
-  };
-
   const getStatusStats = () => {
     // Use filtered URLs if viewing specific campaign, otherwise all URLs
     const urlsToCount = campaignId
@@ -210,7 +218,15 @@ const GeneratedURLs = () => {
 
   const stats = getStatusStats();
 
-  return (
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const renderContent = () => (
     <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center">
@@ -232,7 +248,7 @@ const GeneratedURLs = () => {
         <p className="text-muted-foreground mt-1">
           {campaignName
             ? `View and manage patient URLs for ${campaignName}`
-            : "View and manage all generated patient URLs across campaigns"}
+            : "View and manage all generated contact cards across campaigns"}
         </p>
       </div>
 
@@ -504,18 +520,6 @@ const GeneratedURLs = () => {
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>
-                        {(userRole === "superAdmin" ||
-                          userRole === "admin") && (
-                          <Button
-                            onClick={() => handleDeleteUrl(urlData.id)}
-                            size="sm"
-                            variant="outline"
-                            title="Delete URL"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -526,6 +530,17 @@ const GeneratedURLs = () => {
         </CardContent>
       </Card>
     </div>
+  );
+
+  return (
+    <DashboardLayout
+      userRole={user.role}
+      userEmail={user.email}
+      activeSection="generated-urls"
+      onSectionChange={() => {}}
+    >
+      {renderContent()}
+    </DashboardLayout>
   );
 };
 

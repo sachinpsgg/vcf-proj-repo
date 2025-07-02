@@ -493,10 +493,13 @@ END:VCARD`;
             <Link className="w-4 h-4" />
             View Campaign URLs
           </Button>
-          <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-            <Link className="w-4 h-4" />
-            Generate URL
-          </Button>
+          {campaign.campaignStatus?.toLowerCase() !== "draft" &&
+            campaign.campaignStatus?.toLowerCase() !== "uat" && (
+              <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+                <Link className="w-4 h-4" />
+                Generate URL
+              </Button>
+            )}
         </div>
       </div>
 
@@ -595,7 +598,7 @@ END:VCARD`;
       {/* Generated URLs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Generated Patient URLs</CardTitle>
+          <CardTitle>Generated Contact cards</CardTitle>
           <CardDescription>
             Track and manage URLs generated for this campaign
           </CardDescription>
@@ -861,24 +864,6 @@ END:VCARD`;
                 }
                 rows={3}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="logo">Logo (optional)</Label>
-              <div className="relative">
-                <Upload className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="pl-10"
-                />
-              </div>
-              {formData.logo && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {formData.logo.name}
-                </p>
-              )}
             </div>
           </div>
           <DialogFooter>
