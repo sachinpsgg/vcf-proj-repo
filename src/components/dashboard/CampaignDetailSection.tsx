@@ -598,7 +598,7 @@ END:VCARD`;
       {/* Generated URLs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Generated Patient URLs</CardTitle>
+          <CardTitle>Generated Contact cards</CardTitle>
           <CardDescription>
             Track and manage URLs generated for this campaign
           </CardDescription>
