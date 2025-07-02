@@ -19,7 +19,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, UserPlus, Plus, X } from "lucide-react";
+import { Upload, UserPlus, Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import NurseCreateModal from "@/components/forms/NurseCreateModal";
 import type { UserStatus } from "@/components/forms/UserFormModal";
@@ -27,6 +27,12 @@ import type { UserStatus } from "@/components/forms/UserFormModal";
 interface Brand {
   brand_id: number;
   brand_name: string;
+  logo_url: string;
+  description: string;
+  brandStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Nurse {
@@ -35,6 +41,19 @@ interface Nurse {
   last_name: string;
   email: string;
   userStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  assigned_campaigns?: Array<{
+    campaign_id: number;
+    campaign_name: string;
+  }>;
+  assigned_admins?: Array<{
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  }>;
 }
 
 interface CampaignPayload {
