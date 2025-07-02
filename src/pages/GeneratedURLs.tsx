@@ -122,6 +122,7 @@ const GeneratedURLs = () => {
   const campaignId = searchParams.get("campaignId");
   const campaignName = searchParams.get("campaignName");
 
+  const [user, setUser] = useState<User | null>(null);
   const [generatedUrls, setGeneratedUrls] =
     useState<GeneratedURL[]>(mockGeneratedUrls);
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,23 +130,28 @@ const GeneratedURLs = () => {
   const [campaignFilter, setCampaignFilter] = useState<string>(
     campaignId || "all",
   );
-  const [userRole, setUserRole] = useState<"superAdmin" | "admin" | "nurse">(
-    "admin",
-  );
 
   useEffect(() => {
-    // Get user role from localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setUserRole(user.role || "nurse");
+    // Check authentication
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      navigate("/");
+      return;
     }
+
+    const parsedUser = JSON.parse(userData);
+    if (!parsedUser.isAuthenticated) {
+      navigate("/");
+      return;
+    }
+
+    setUser(parsedUser);
 
     // Set campaign filter if coming from specific campaign
     if (campaignId) {
       setCampaignFilter(campaignId);
     }
-  }, [campaignId]);
+  }, [campaignId, navigate]);
 
   // Filter URLs based on search term and filters
   const filteredUrls = generatedUrls.filter((url) => {
