@@ -641,7 +641,7 @@ const CampaignFormModal = ({
                   <Button
                     type="button"
                     onClick={handleAddNurse}
-                    disabled={!selectedNurse}
+                    disabled={!selectedNurse || isLoadingNurses}
                     size="icon"
                     variant="outline"
                     title="Assign existing nurse"
