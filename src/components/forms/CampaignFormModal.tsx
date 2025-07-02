@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +115,8 @@ const CampaignFormModal = ({
   const [selectedNurse, setSelectedNurse] = useState<string>("");
   const [isNurseModalOpen, setIsNurseModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -123,6 +124,10 @@ const CampaignFormModal = ({
         ...initialData,
         nurse_ids: initialData.nurse_ids || [],
       });
+      // Set image preview if there's an existing logo URL
+      if (initialData.logo_url) {
+        setImagePreview(initialData.logo_url);
+      }
     } else {
       setForm({
         name: "",
@@ -132,18 +137,74 @@ const CampaignFormModal = ({
         nurse_ids: [],
       });
       setSelectedImage(null);
+      setImagePreview("");
     }
     setSelectedNurse("");
     setIsNurseModalOpen(false);
+    setIsUploadingImage(false);
   }, [initialData, isOpen]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:image/...;base64, prefix
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const uploadBrandLogo = async (
+    base64Image: string,
+    brandId: number,
+  ): Promise<string> => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+
+    const response = await fetch(
+      "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          brand_id: brandId.toString(),
+          base64Image: base64Image,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Upload failed" }));
+      throw new Error(errorData.message || "Failed to upload logo");
+    }
+
+    const data = await response.json();
+    return data.logo_url;
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log(file)
     if (file) {
       if (file.type.startsWith("image/")) {
         setSelectedImage(file);
-        setForm((prev) => ({ ...prev, logo_url: file.name }));
+
+        // Create preview URL
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
       } else {
         toast.error("Please select an image file");
       }
@@ -206,22 +267,39 @@ const CampaignFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let finalLogoUrl = form.logo_url;
-    if (selectedImage) {
-      finalLogoUrl = URL.createObjectURL(selectedImage);
+
+    if (form.brand_id === 0) {
+      toast.error("Please select a brand");
+      return;
     }
 
-    onSubmit({
-      ...form,
-      logo_url: finalLogoUrl,
-    });
+    let finalLogoUrl = form.logo_url;
 
-    onClose();
-    toast.success(
-      isEditing
-        ? "Campaign updated successfully!"
-        : "Campaign created successfully!",
-    );
+    try {
+      // If there's a new image selected, upload it first
+      if (selectedImage) {
+        setIsUploadingImage(true);
+        const base64Image = await convertToBase64(selectedImage);
+        finalLogoUrl = await uploadBrandLogo(base64Image, form.brand_id);
+        toast.success("Logo uploaded successfully!");
+      }
+
+      onSubmit({
+        ...form,
+        logo_url: finalLogoUrl,
+      });
+
+      onClose();
+      toast.success(
+        isEditing
+          ? "Campaign updated successfully!"
+          : "Campaign created successfully!",
+      );
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload logo");
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -274,32 +352,49 @@ const CampaignFormModal = ({
 
           <div>
             <Label>Campaign Logo</Label>
-            <div className="flex gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={() =>
-                  document.querySelector('input[type="file"]')?.click()
-                }
-              >
-                <Upload className="w-4 h-4" />
-              </Button>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
+                  disabled={isUploadingImage}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() =>
+                    document.querySelector('input[type="file"]')?.click()
+                  }
+                  disabled={isUploadingImage}
+                >
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {selectedImage && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {selectedImage.name}
+                </p>
+              )}
+
+              {isUploadingImage && (
+                <p className="text-sm text-blue-600">Uploading logo...</p>
+              )}
+
+              {imagePreview && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                  <img
+                    src={imagePreview}
+                    alt="Logo preview"
+                    className="w-32 h-32 object-contain border border-gray-200 rounded-lg"
+                  />
+                </div>
+              )}
             </div>
-            {selectedImage && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Selected: {selectedImage.name}
-              </p>
-            )}
-            {/*{form.logo_url && !selectedImage && (*/}
-              <img src={form.logo_url}/>
-            {/*)}*/}
           </div>
 
           <div>
@@ -385,11 +480,19 @@ const CampaignFormModal = ({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isUploadingImage}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {isEditing ? "Update Campaign" : "Create Campaign"}
+            <Button type="submit" disabled={isUploadingImage}>
+              {isUploadingImage
+                ? "Uploading..."
+                : isEditing
+                  ? "Update Campaign"
+                  : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>
