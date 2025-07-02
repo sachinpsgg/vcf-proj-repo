@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,6 +39,7 @@ import {
   FileText,
   Trash2,
   Edit,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -107,11 +109,18 @@ const mockGeneratedUrls: GeneratedURL[] = [
 ];
 
 const GeneratedURLs = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get("campaignId");
+  const campaignName = searchParams.get("campaignName");
+
   const [generatedUrls, setGeneratedUrls] =
     useState<GeneratedURL[]>(mockGeneratedUrls);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [campaignFilter, setCampaignFilter] = useState<string>("all");
+  const [campaignFilter, setCampaignFilter] = useState<string>(
+    campaignId || "all",
+  );
   const [userRole, setUserRole] = useState<"superAdmin" | "admin" | "nurse">(
     "admin",
   );
@@ -123,7 +132,12 @@ const GeneratedURLs = () => {
       const user = JSON.parse(storedUser);
       setUserRole(user.role || "nurse");
     }
-  }, []);
+
+    // Set campaign filter if coming from specific campaign
+    if (campaignId) {
+      setCampaignFilter(campaignId);
+    }
+  }, [campaignId]);
 
   // Filter URLs based on search term and filters
   const filteredUrls = generatedUrls.filter((url) => {
@@ -188,11 +202,27 @@ const GeneratedURLs = () => {
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="gap-2 hover:bg-muted"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+      </div>
+
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Generated URLs</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          {campaignName ? `Generated URLs - ${campaignName}` : "Generated URLs"}
+        </h1>
         <p className="text-muted-foreground mt-1">
-          View and manage all generated patient URLs across campaigns
+          {campaignName
+            ? `View and manage patient URLs for ${campaignName}`
+            : "View and manage all generated patient URLs across campaigns"}
         </p>
       </div>
 
@@ -255,7 +285,9 @@ const GeneratedURLs = () => {
           <CardTitle className="text-lg">Filters & Search</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div
+            className={`grid grid-cols-1 gap-4 ${campaignId ? "md:grid-cols-3" : "md:grid-cols-4"}`}
+          >
             <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
               <div className="relative">
@@ -283,22 +315,27 @@ const GeneratedURLs = () => {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Campaign</label>
-              <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Campaigns</SelectItem>
-                  {uniqueCampaigns.map((campaign) => (
-                    <SelectItem key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!campaignId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Campaign</label>
+                <Select
+                  value={campaignFilter}
+                  onValueChange={setCampaignFilter}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Campaigns</SelectItem>
+                    {uniqueCampaigns.map((campaign) => (
+                      <SelectItem key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex items-end">
               <Button
@@ -306,7 +343,9 @@ const GeneratedURLs = () => {
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
-                  setCampaignFilter("all");
+                  if (!campaignId) {
+                    setCampaignFilter("all");
+                  }
                 }}
                 className="w-full"
               >
