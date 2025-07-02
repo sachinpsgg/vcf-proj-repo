@@ -104,11 +104,14 @@ interface NurseApiData {
 }
 
 interface CampaignPayload {
+  campaign_id?: number;
   name: string;
   logo_url: string;
   brand_id: number;
+  campaign_url: string;
   notes: string;
   nurse_ids: number[];
+  work_number: string;
 }
 
 interface GeneratedURL {
@@ -233,54 +236,15 @@ const CampaignDetailSection = ({
   });
 
   const handleEditCampaign = async (campaignData: CampaignPayload) => {
-    try {
-      const storedAuth = localStorage.getItem("user");
-      if (!storedAuth) throw new Error("User not authenticated");
-
-      const { token } = JSON.parse(storedAuth);
-
-      // Extract numeric ID from campaign-{id} format
-      const numericId = campaignId.replace("campaign-", "");
-
-      const updatePayload = {
-        campaign_id: parseInt(numericId, 10),
-        name: campaignData.name,
-        notes: campaignData.notes,
-      };
-
-      const response = await fetch(
-        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Failed to update campaign");
-      }
-
-      toast.success("Campaign updated successfully");
-      setIsModalOpen(false);
-      refetchCampaign();
-      refetchNurses();
-    } catch (error: any) {
-      console.error("Error updating campaign:", error);
-      toast.error(error.message || "Failed to update campaign");
-    }
+    // The API call is now handled inside the modal
+    setIsModalOpen(false);
+    refetchCampaign();
+    refetchNurses();
   };
 
   const handleCreateCampaign = (campaignData: CampaignPayload) => {
-    // The actual API call is handled inside CampaignFormModal
-    // This callback is triggered after successful creation
-    toast.success("Campaign created successfully! Refreshing data...");
+    // The API call is now handled inside the modal
     setIsModalOpen(false);
-    // Optionally refetch data if needed
     refetchCampaign();
   };
 
@@ -418,11 +382,14 @@ END:VCARD`;
     campaign: CampaignApiData,
   ): CampaignPayload => {
     return {
+      campaign_id: campaign.campaign_id,
       name: campaign.campaign_name,
       logo_url: campaign.logo_url,
       brand_id: campaign.brand_id,
+      campaign_url: campaign.campaign_url || "",
       notes: campaign.notes,
       nurse_ids: nurses?.map((nurse) => nurse.user_id) || [],
+      work_number: campaign.work_number || "",
     };
   };
 
