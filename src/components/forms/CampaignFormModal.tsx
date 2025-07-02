@@ -102,6 +102,84 @@ const CampaignFormModal = ({
   const [isLoadingBrands, setIsLoadingBrands] = useState(false);
   const [isLoadingNurses, setIsLoadingNurses] = useState(false);
 
+  // API Functions
+  const getAuthToken = () => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+    const user = JSON.parse(userString);
+    return user.token;
+  };
+
+  const fetchBrands = async () => {
+    try {
+      setIsLoadingBrands(true);
+      const token = getAuthToken();
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-brands",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch brands");
+      }
+
+      const data = await response.json();
+      setBrands(data.brands || []);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch brands");
+      setBrands([]);
+    } finally {
+      setIsLoadingBrands(false);
+    }
+  };
+
+  const fetchNurses = async () => {
+    try {
+      setIsLoadingNurses(true);
+      const token = getAuthToken();
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/getAll",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch nurses");
+      }
+
+      const data = await response.json();
+      setNurses(data.nurses || []);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch nurses");
+      setNurses([]);
+    } finally {
+      setIsLoadingNurses(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch data when modal opens
+      fetchBrands();
+      fetchNurses();
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (initialData) {
       setForm({
