@@ -690,16 +690,21 @@ const CampaignFormModal = ({
             <Button
               variant="outline"
               onClick={onClose}
-              disabled={isUploadingImage}
+              disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isUploadingImage}>
+            <Button
+              type="submit"
+              disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
+            >
               {isUploadingImage
                 ? "Uploading..."
-                : isEditing
-                  ? "Update Campaign"
-                  : "Create Campaign"}
+                : isLoadingBrands || isLoadingNurses
+                  ? "Loading..."
+                  : isEditing
+                    ? "Update Campaign"
+                    : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>
