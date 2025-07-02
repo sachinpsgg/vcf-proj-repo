@@ -518,8 +518,8 @@ const GeneratedURLs = () => {
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>
-                        {(userRole === "superAdmin" ||
-                          userRole === "admin") && (
+                        {(user?.role === "superAdmin" ||
+                          user?.role === "admin") && (
                           <Button
                             onClick={() => handleDeleteUrl(urlData.id)}
                             size="sm"
