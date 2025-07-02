@@ -67,52 +67,6 @@ interface CampaignPayload {
   campaign_id?: number; // For updates
 }
 
-// Static data for brands and nurses
-const staticBrands: Brand[] = [
-  { brand_id: 1, brand_name: "HealthTech Solutions" },
-  { brand_id: 2, brand_name: "MedCare Plus" },
-  { brand_id: 3, brand_name: "Wellness Group" },
-  { brand_id: 4, brand_name: "LifeCare Medical" },
-];
-
-const staticNurses: Nurse[] = [
-  {
-    user_id: 1,
-    first_name: "Sarah",
-    last_name: "Wilson",
-    email: "sarah@healthtech.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 2,
-    first_name: "Mike",
-    last_name: "Johnson",
-    email: "mike@healthtech.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 3,
-    first_name: "Emma",
-    last_name: "Davis",
-    email: "emma@medcareplus.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 4,
-    first_name: "Lisa",
-    last_name: "Brown",
-    email: "lisa@wellness.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 5,
-    first_name: "David",
-    last_name: "Miller",
-    email: "david@lifecare.com",
-    userStatus: "active",
-  },
-];
-
 const CampaignFormModal = ({
   isOpen,
   onClose,
