@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -120,7 +121,7 @@ const fetchCampaignById = async (
   }
 
   const data = await response.json();
-  console.log(data)
+  console.log(data);
   return data.campaign;
 };
 
@@ -144,11 +145,12 @@ const fetchBrandById = async (brandId: number): Promise<BrandApiData> => {
   }
 
   const data = await response.json();
-  console.log(data)
+  console.log(data);
   return data.brand;
 };
 
 const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
+  const navigate = useNavigate();
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [editingUrl, setEditingUrl] = useState<GeneratedURL | null>(null);
@@ -299,10 +301,24 @@ END:VCARD`;
             Campaign details and URL management
           </p>
         </div>
-        <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-          <Link className="w-4 h-4" />
-          Generate URL
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() =>
+              navigate(
+                `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
+              )
+            }
+            className="gap-2"
+          >
+            <Link className="w-4 h-4" />
+            View Campaign URLs
+          </Button>
+          <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+            <Link className="w-4 h-4" />
+            Generate URL
+          </Button>
+        </div>
       </div>
 
       {/* Campaign Info Card */}
