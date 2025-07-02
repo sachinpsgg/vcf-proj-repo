@@ -19,7 +19,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, UserPlus, Plus, X } from "lucide-react";
+import { Upload, UserPlus, Plus, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import NurseCreateModal from "@/components/forms/NurseCreateModal";
 import type { UserStatus } from "@/components/forms/UserFormModal";
@@ -27,6 +27,12 @@ import type { UserStatus } from "@/components/forms/UserFormModal";
 interface Brand {
   brand_id: number;
   brand_name: string;
+  logo_url: string;
+  description: string;
+  brandStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Nurse {
@@ -35,6 +41,19 @@ interface Nurse {
   last_name: string;
   email: string;
   userStatus: string;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+  assigned_campaigns?: Array<{
+    campaign_id: number;
+    campaign_name: string;
+  }>;
+  assigned_admins?: Array<{
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+  }>;
 }
 
 interface CampaignPayload {
@@ -47,52 +66,6 @@ interface CampaignPayload {
   work_number: string;
   campaign_id?: number; // For updates
 }
-
-// Static data for brands and nurses
-const staticBrands: Brand[] = [
-  { brand_id: 1, brand_name: "HealthTech Solutions" },
-  { brand_id: 2, brand_name: "MedCare Plus" },
-  { brand_id: 3, brand_name: "Wellness Group" },
-  { brand_id: 4, brand_name: "LifeCare Medical" },
-];
-
-const staticNurses: Nurse[] = [
-  {
-    user_id: 1,
-    first_name: "Sarah",
-    last_name: "Wilson",
-    email: "sarah@healthtech.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 2,
-    first_name: "Mike",
-    last_name: "Johnson",
-    email: "mike@healthtech.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 3,
-    first_name: "Emma",
-    last_name: "Davis",
-    email: "emma@medcareplus.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 4,
-    first_name: "Lisa",
-    last_name: "Brown",
-    email: "lisa@wellness.com",
-    userStatus: "active",
-  },
-  {
-    user_id: 5,
-    first_name: "David",
-    last_name: "Miller",
-    email: "david@lifecare.com",
-    userStatus: "active",
-  },
-];
 
 const CampaignFormModal = ({
   isOpen,
@@ -122,6 +95,90 @@ const CampaignFormModal = ({
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // API data states
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [nurses, setNurses] = useState<Nurse[]>([]);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
+  const [isLoadingNurses, setIsLoadingNurses] = useState(false);
+
+  // API Functions
+  const getAuthToken = () => {
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+      throw new Error("No authentication token found");
+    }
+    const user = JSON.parse(userString);
+    return user.token;
+  };
+
+  const fetchBrands = async () => {
+    try {
+      setIsLoadingBrands(true);
+      const token = getAuthToken();
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/get-all-brands",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch brands");
+      }
+
+      const data = await response.json();
+      setBrands(data.brands || []);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch brands");
+      setBrands([]);
+    } finally {
+      setIsLoadingBrands(false);
+    }
+  };
+
+  const fetchNurses = async () => {
+    try {
+      setIsLoadingNurses(true);
+      const token = getAuthToken();
+
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/getAll",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch nurses");
+      }
+
+      const data = await response.json();
+      setNurses(data.nurses || []);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fetch nurses");
+      setNurses([]);
+    } finally {
+      setIsLoadingNurses(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch data when modal opens
+      fetchBrands();
+      fetchNurses();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialData) {
@@ -177,13 +234,7 @@ const CampaignFormModal = ({
     base64Image: string,
     brandId: number,
   ): Promise<string> => {
-    const userString = localStorage.getItem("user");
-    if (!userString) {
-      throw new Error("No authentication token found");
-    }
-
-    const user = JSON.parse(userString);
-    const token = user.token;
+    const token = getAuthToken();
 
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
@@ -247,15 +298,19 @@ const CampaignFormModal = ({
     status: UserStatus;
     assignedBrands: { id: string; name: string }[];
   }) => {
-    const newNurseId = Math.max(...staticNurses.map((n) => n.user_id), 0) + 1;
-    staticNurses.push({
+    const newNurseId = Math.max(...nurses.map((n) => n.user_id), 0) + 1;
+    const newNurse: Nurse = {
       user_id: newNurseId,
       first_name: nurseData.firstName,
       last_name: nurseData.lastName,
       email: nurseData.email,
       userStatus: "active",
-    });
+      created_by: 1, // placeholder
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
+    setNurses((prev) => [...prev, newNurse]);
     setForm((prev) => ({
       ...prev,
       nurse_ids: [...prev.nurse_ids, newNurseId],
@@ -271,23 +326,17 @@ const CampaignFormModal = ({
   };
 
   const getAvailableNurses = () =>
-    staticNurses.filter(
+    nurses.filter(
       (nurse) =>
         !form.nurse_ids.includes(nurse.user_id) &&
         nurse.userStatus === "active",
     );
 
   const getAssignedNurses = () =>
-    staticNurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
+    nurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
 
   const createCampaign = async (campaignData: CampaignPayload) => {
-    const userString = localStorage.getItem("user");
-    if (!userString) {
-      throw new Error("No authentication token found");
-    }
-
-    const user = JSON.parse(userString);
-    const token = user.token;
+    const token = getAuthToken();
 
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
@@ -320,13 +369,7 @@ const CampaignFormModal = ({
   };
 
   const updateCampaign = async (campaignData: CampaignPayload) => {
-    const userString = localStorage.getItem("user");
-    if (!userString) {
-      throw new Error("No authentication token found");
-    }
-
-    const user = JSON.parse(userString);
-    const token = user.token;
+    const token = getAuthToken();
 
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
@@ -436,16 +479,26 @@ const CampaignFormModal = ({
                 onValueChange={(v) =>
                   setForm({ ...form, brand_id: parseInt(v, 10) || 0 })
                 }
+                disabled={isLoadingBrands}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Brand" />
+                  <SelectValue
+                    placeholder={
+                      isLoadingBrands ? "Loading brands..." : "Select Brand"
+                    }
+                  />
+                  {isLoadingBrands && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {staticBrands.map((b) => (
-                    <SelectItem key={b.brand_id} value={String(b.brand_id)}>
-                      {b.brand_name}
-                    </SelectItem>
-                  ))}
+                  {brands
+                    .filter((b) => b.brandStatus === "active")
+                    .map((b) => (
+                      <SelectItem key={b.brand_id} value={String(b.brand_id)}>
+                        {b.brand_name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -542,9 +595,19 @@ const CampaignFormModal = ({
                   <Select
                     value={selectedNurse}
                     onValueChange={setSelectedNurse}
+                    disabled={isLoadingNurses}
                   >
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a nurse" />
+                      <SelectValue
+                        placeholder={
+                          isLoadingNurses
+                            ? "Loading nurses..."
+                            : "Select a nurse"
+                        }
+                      />
+                      {isLoadingNurses && (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
                     </SelectTrigger>
                     <SelectContent>
                       {getAvailableNurses().map((nurse) => (
@@ -560,7 +623,7 @@ const CampaignFormModal = ({
                   <Button
                     type="button"
                     onClick={handleAddNurse}
-                    disabled={!selectedNurse}
+                    disabled={!selectedNurse || isLoadingNurses}
                     size="icon"
                     variant="outline"
                     title="Assign existing nurse"
@@ -609,16 +672,21 @@ const CampaignFormModal = ({
             <Button
               variant="outline"
               onClick={onClose}
-              disabled={isUploadingImage}
+              disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isUploadingImage}>
+            <Button
+              type="submit"
+              disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
+            >
               {isUploadingImage
                 ? "Uploading..."
-                : isEditing
-                  ? "Update Campaign"
-                  : "Create Campaign"}
+                : isLoadingBrands || isLoadingNurses
+                  ? "Loading..."
+                  : isEditing
+                    ? "Update Campaign"
+                    : "Create Campaign"}
             </Button>
           </DialogFooter>
         </form>
