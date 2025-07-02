@@ -497,16 +497,26 @@ const CampaignFormModal = ({
                 onValueChange={(v) =>
                   setForm({ ...form, brand_id: parseInt(v, 10) || 0 })
                 }
+                disabled={isLoadingBrands}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Brand" />
+                  <SelectValue
+                    placeholder={
+                      isLoadingBrands ? "Loading brands..." : "Select Brand"
+                    }
+                  />
+                  {isLoadingBrands && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
                 </SelectTrigger>
                 <SelectContent>
-                  {staticBrands.map((b) => (
-                    <SelectItem key={b.brand_id} value={String(b.brand_id)}>
-                      {b.brand_name}
-                    </SelectItem>
-                  ))}
+                  {brands
+                    .filter((b) => b.brandStatus === "active")
+                    .map((b) => (
+                      <SelectItem key={b.brand_id} value={String(b.brand_id)}>
+                        {b.brand_name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
