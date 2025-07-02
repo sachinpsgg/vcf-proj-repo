@@ -45,6 +45,12 @@ import {
 import { toast } from "sonner";
 import type { UserRole } from "./Login";
 
+interface User {
+  email: string;
+  role: UserRole;
+  isAuthenticated: boolean;
+}
+
 interface GeneratedURL {
   id: string;
   campaignId: string;
