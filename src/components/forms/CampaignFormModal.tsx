@@ -234,13 +234,7 @@ const CampaignFormModal = ({
     base64Image: string,
     brandId: number,
   ): Promise<string> => {
-    const userString = localStorage.getItem("user");
-    if (!userString) {
-      throw new Error("No authentication token found");
-    }
-
-    const user = JSON.parse(userString);
-    const token = user.token;
+    const token = getAuthToken();
 
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/brands/uploadBrandLogo",
