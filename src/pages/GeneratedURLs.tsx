@@ -248,7 +248,7 @@ const GeneratedURLs = () => {
         <p className="text-muted-foreground mt-1">
           {campaignName
             ? `View and manage patient URLs for ${campaignName}`
-            : "View and manage all generated patient URLs across campaigns"}
+            : "View and manage all generated contact cards across campaigns"}
         </p>
       </div>
 
