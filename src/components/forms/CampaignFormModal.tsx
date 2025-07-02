@@ -336,13 +336,7 @@ const CampaignFormModal = ({
     nurses.filter((nurse) => form.nurse_ids.includes(nurse.user_id));
 
   const createCampaign = async (campaignData: CampaignPayload) => {
-    const userString = localStorage.getItem("user");
-    if (!userString) {
-      throw new Error("No authentication token found");
-    }
-
-    const user = JSON.parse(userString);
-    const token = user.token;
+    const token = getAuthToken();
 
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
