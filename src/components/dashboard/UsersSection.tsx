@@ -489,21 +489,7 @@ const UsersSection = ({ activeTab, userRole }: UsersSectionProps) => {
                     <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleToggleStatus(user.id, userType)}
-                  >
-                    {user.status === "Active" ? (
-                      <>
-                        <UserX className="mr-2 h-4 w-4" />
-                        Deactivate
-                      </>
-                    ) : (
-                      <>
-                        <UserPlusIcon className="mr-2 h-4 w-4" />
-                        Activate
-                      </>
-                    )}
-                  </DropdownMenuItem>
+
                   <DropdownMenuItem
                     onClick={() => handleDeleteUser(user.id, userType)}
                     className="text-destructive"

@@ -55,7 +55,6 @@ const Dashboard = () => {
   }
 
   const renderContent = () => {
-    // Handle individual campaign views
     if (activeSection.startsWith("campaign-")) {
       const handleBack = () => {
         if (user.role === "superAdmin") {

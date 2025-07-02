@@ -172,16 +172,10 @@ const CampaignsSection = ({
   };
 
   const handleEditCampaign = async (id: string, campaignData: any) => {
-    // The API call is now handled inside the modal
+    console.log(campaignData,id);
+    console.log("insection")
     refetchCampaigns();
   };
-
-  const handleDeleteCampaign = (id: string) => {
-    // TODO: Implement actual delete API call
-    toast.success("Campaign deleted successfully");
-    refetchCampaigns();
-  };
-
   const handleDeactivateCampaign = (id: string) => {
     // TODO: Implement actual deactivate API call
     toast.success("Campaign deactivated");
@@ -534,7 +528,7 @@ const CampaignsSection = ({
         }
         initialData={
           editingCampaign
-            ? {
+            ? {campaign_id:editingCampaign.id,
                 name: editingCampaign.name,
                 logo_url: editingCampaign.logo || "",
                 brand_id: editingCampaign.brandId,

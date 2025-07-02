@@ -480,77 +480,56 @@ END:VCARD`;
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() =>
-              navigate(
-                `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
-              )
-            }
-            className="gap-2"
+        <div className="flex items-center justify-between">
+          <Badge
+            variant={getStatusBadgeVariant(campaign.campaignStatus)}
+            className="text-sm px-3 py-1 font-medium"
           >
-            <Link className="w-4 h-4" />
-            View Campaign URLs
-          </Button>
-          {campaign.campaignStatus?.toLowerCase() !== "draft" &&
-            campaign.campaignStatus?.toLowerCase() !== "uat" && (
-              <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-                <Link className="w-4 h-4" />
-                Generate URL
+            {campaign.campaignStatus.toUpperCase()}
+          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <MoreHorizontal className="h-4 w-4" />
+                Actions
               </Button>
-            )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={openCreateModal}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Campaign
+              </DropdownMenuItem>
+
+              {(campaign.campaignStatus?.toLowerCase() === "draft" ||
+                campaign.campaignStatus?.toLowerCase() === "uat") && (
+                <DropdownMenuItem onClick={openEditModal}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Campaign
+                </DropdownMenuItem>
+              )}
+
+              {campaign.campaignStatus?.toLowerCase() === "uat" && (
+                <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Publish to Production
+                </DropdownMenuItem>
+              )}
+
+              {campaign.campaignStatus?.toLowerCase() === "prod" && (
+                <DropdownMenuItem
+                  onClick={handleToggleStatus}
+                  className="text-destructive"
+                >
+                  <PowerOff className="mr-2 h-4 w-4" />
+                  Deactivate Campaign
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Status Badge and Actions */}
-      <div className="flex items-center justify-between">
-        <Badge
-          variant={getStatusBadgeVariant(campaign.campaignStatus)}
-          className="text-sm px-3 py-1 font-medium"
-        >
-          {campaign.campaignStatus.toUpperCase()}
-        </Badge>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <MoreHorizontal className="h-4 w-4" />
-              Actions
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={openCreateModal}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Campaign
-            </DropdownMenuItem>
-
-            {(campaign.campaignStatus?.toLowerCase() === "draft" ||
-              campaign.campaignStatus?.toLowerCase() === "uat") && (
-              <DropdownMenuItem onClick={openEditModal}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Campaign
-              </DropdownMenuItem>
-            )}
-
-            {campaign.campaignStatus?.toLowerCase() === "uat" && (
-              <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
-                <Send className="mr-2 h-4 w-4" />
-                Publish to Production
-              </DropdownMenuItem>
-            )}
-
-            {campaign.campaignStatus?.toLowerCase() === "prod" && (
-              <DropdownMenuItem
-                onClick={handleToggleStatus}
-                className="text-destructive"
-              >
-                <PowerOff className="mr-2 h-4 w-4" />
-                Deactivate Campaign
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
 
       {/* Campaign Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -565,6 +544,7 @@ END:VCARD`;
               Assigned team members
             </p>
           </CardContent>
+
         </Card>
 
         <Card>
@@ -584,7 +564,29 @@ END:VCARD`;
           </CardContent>
         </Card>
       </div>
-
+      <div className="flex items-center justify-end gap-3">
+        {campaign.campaignStatus?.toLowerCase() !== "draft" &&
+          campaign.campaignStatus?.toLowerCase() !== "uat" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  navigate(
+                    `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
+                  )
+                }
+                className="gap-2"
+              >
+                <Link className="w-4 h-4" />
+                View Campaign URLs
+              </Button>
+              <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
+                <Link className="w-4 h-4" />
+                Generate URL
+              </Button>
+            </>
+          )}
+      </div>
       {/* Campaign Notes */}
       <Card>
         <CardHeader>
@@ -595,117 +597,10 @@ END:VCARD`;
         </CardContent>
       </Card>
 
-      {/* Generated URLs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generated Contact cards</CardTitle>
-          <CardDescription>
-            Track and manage URLs generated for this campaign
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Doctor Info</TableHead>
-                <TableHead>Patient URL</TableHead>
-                <TableHead>Generated</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {generatedUrls.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No URLs generated yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                generatedUrls.map((urlData) => (
-                  <TableRow key={urlData.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        {urlData.logo && (
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage
-                              src={urlData.logo}
-                              alt={urlData.doctorName}
-                            />
-                            <AvatarFallback>
-                              {urlData.doctorName.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div>
-                          <div className="font-medium">
-                            {urlData.doctorName}
-                          </div>
-                          <div className="text-sm text-muted-foreground font-mono">
-                            {urlData.doctorPhone}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                          {urlData.patientUrl}
-                        </code>
-                        <Button
-                          onClick={() => handleCopyUrl(urlData.patientUrl)}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {urlData.generatedAt.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={urlData.isActive ? "default" : "secondary"}
-                      >
-                        {urlData.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center gap-2 justify-end">
-                        <Button
-                          onClick={() => handleDownloadVCF(urlData)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            window.open(urlData.patientUrl, "_blank")
-                          }
-                          size="sm"
-                          variant="outline"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
       {/* Assigned Nurses Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Assigned Team Members</CardTitle>
+          <CardTitle>Assigned Nurses</CardTitle>
           <CardDescription>Nurses assigned to this campaign</CardDescription>
         </CardHeader>
         <CardContent>

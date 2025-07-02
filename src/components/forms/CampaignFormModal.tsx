@@ -89,7 +89,6 @@ const CampaignFormModal = ({
     nurse_ids: [],
     work_number: "",
   });
-
   const [selectedNurse, setSelectedNurse] = useState<string>("");
   const [isNurseModalOpen, setIsNurseModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -247,6 +246,7 @@ const CampaignFormModal = ({
         body: JSON.stringify({
           brand_id: brandId.toString(),
           base64Image: base64Image,
+          fileExtension: "png"
         }),
       },
     );
@@ -264,16 +264,22 @@ const CampaignFormModal = ({
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith("image/")) {
-        setSelectedImage(file);
+    if (!file || !file.type.startsWith("image/")) return toast.error("Select a valid image");
 
-        // Create preview URL
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-      } else {
-        toast.error("Please select an image file");
-      }
+    try {
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setIsUploadingImage(true);
+
+      const base64 = await convertToBase64(file);
+      const logoUrl = await uploadBrandLogo(base64, form.brand_id);
+      console.log(logoUrl)
+      setForm({ ...form, logo_url: logoUrl });
+      toast.success("Logo uploaded");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -337,7 +343,7 @@ const CampaignFormModal = ({
 
   const createCampaign = async (campaignData: CampaignPayload) => {
     const token = getAuthToken();
-
+    console.log(campaignData)
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/create-campaign",
       {
@@ -370,7 +376,7 @@ const CampaignFormModal = ({
 
   const updateCampaign = async (campaignData: CampaignPayload) => {
     const token = getAuthToken();
-
+    console.log(initialData,campaignData)
     const response = await fetch(
       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
       {
@@ -380,7 +386,7 @@ const CampaignFormModal = ({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          campaign_id: campaignData.campaign_id,
+          campaign_id: initialData.campaign_id,
           name: campaignData.name,
           logo_url: campaignData.logo_url,
           brand_id: campaignData.brand_id,
@@ -391,14 +397,13 @@ const CampaignFormModal = ({
         }),
       },
     );
-
+    console.log(response)
     if (!response.ok) {
       const errorData = await response
         .json()
         .catch(() => ({ message: "Update failed" }));
       throw new Error(errorData.message || "Failed to update campaign");
     }
-
     return await response.json();
   };
 
@@ -413,19 +418,11 @@ const CampaignFormModal = ({
     let finalLogoUrl = form.logo_url;
 
     try {
-      // If there's a new image selected, upload it first
-      if (selectedImage) {
-        setIsUploadingImage(true);
-        const base64Image = await convertToBase64(selectedImage);
-        finalLogoUrl = await uploadBrandLogo(base64Image, form.brand_id);
-        toast.success("Logo uploaded successfully!");
-      }
-
       const campaignData = {
         ...form,
         logo_url: finalLogoUrl,
       };
-
+      console.log(campaignData)
       if (isEditing) {
         await updateCampaign(campaignData);
         toast.success("Campaign updated successfully!");
@@ -585,24 +582,28 @@ const CampaignFormModal = ({
               placeholder="Campaign description and notes..."
             />
           </div>
-
-          {/* Nurse Assignment Section */}
           <div className="space-y-4">
             <div>
               <Label className="text-base font-medium">Assigned Nurses</Label>
               <div className="mt-2 space-y-3">
                 <div className="flex gap-2">
                   <Select
-                    value={selectedNurse}
-                    onValueChange={setSelectedNurse}
+                    value=""
+                    onValueChange={(value) => {
+                      const id = parseInt(value, 10);
+                      if (!form.nurse_ids.includes(id)) {
+                        setForm((prev) => ({
+                          ...prev,
+                          nurse_ids: [...prev.nurse_ids, id],
+                        }));
+                      }
+                    }}
                     disabled={isLoadingNurses}
                   >
                     <SelectTrigger className="flex-1">
                       <SelectValue
                         placeholder={
-                          isLoadingNurses
-                            ? "Loading nurses..."
-                            : "Select a nurse"
+                          isLoadingNurses ? "Loading nurses..." : "Select a nurse"
                         }
                       />
                       {isLoadingNurses && (
@@ -620,16 +621,7 @@ const CampaignFormModal = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    type="button"
-                    onClick={handleAddNurse}
-                    disabled={!selectedNurse || isLoadingNurses}
-                    size="icon"
-                    variant="outline"
-                    title="Assign existing nurse"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </Button>
+
                   <Button
                     type="button"
                     onClick={() => setIsNurseModalOpen(true)}
@@ -666,10 +658,12 @@ const CampaignFormModal = ({
                 </div>
               </div>
             </div>
+
           </div>
 
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={onClose}
               disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
