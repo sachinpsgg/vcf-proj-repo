@@ -456,7 +456,7 @@ const CampaignFormModal = ({
             <div>
               <Label>Campaign URL</Label>
               <Input
-                value={form.campaign_url}
+                value={form.campaign_url || ""}
                 onChange={(e) =>
                   setForm({ ...form, campaign_url: e.target.value })
                 }
@@ -467,7 +467,7 @@ const CampaignFormModal = ({
               <Label>Work Phone Number</Label>
               <Input
                 type="tel"
-                value={form.work_number}
+                value={form.work_number || ""}
                 onChange={(e) =>
                   setForm({ ...form, work_number: e.target.value })
                 }
