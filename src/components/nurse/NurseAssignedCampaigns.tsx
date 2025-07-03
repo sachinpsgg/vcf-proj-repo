@@ -75,10 +75,9 @@ interface GeneratedURL {
   id: string;
   campaignId: string;
   campaignName: string;
-  doctorPhone: string;
-  doctorName: string;
-  description: string;
-  logo: string;
+  phone_number: string;
+  name: string;
+  email: string;
   patientUrl: string;
   vcfUrl: string;
   generatedAt: Date;
@@ -86,10 +85,9 @@ interface GeneratedURL {
 }
 
 interface URLFormData {
-  doctorPhone: string;
-  doctorName: string;
-  description: string;
-  logo: File | null;
+  phone_number: string;
+  name: string;
+  email: string;
 }
 
 // Fetch functions
@@ -148,10 +146,9 @@ const NurseAssignedCampaigns = () => {
   const [selectedCampaign, setSelectedCampaign] =
     useState<NurseCampaignApiData | null>(null);
   const [formData, setFormData] = useState<URLFormData>({
-    doctorPhone: "",
-    doctorName: "",
-    description: "",
-    logo: null,
+    phone_number: "",
+    name: "",
+    email: "",
   });
 
   // Fetch nurse campaigns
@@ -185,51 +182,66 @@ const NurseAssignedCampaigns = () => {
   ) => {
     return `BEGIN:VCARD
 VERSION:3.0
-FN:${data.doctorName}
-TEL:${data.doctorPhone}
-NOTE:${data.description}
+FN:${data.name}
+TEL:${data.phone_number}
+NOTE:${data.email}
 ORG:${brand.brand_name}
 TITLE:${campaign.campaign_name}
 END:VCARD`;
   };
 
-  const handleGenerateUrl = () => {
-    if (
-      !selectedCampaign ||
-      !formData.doctorPhone ||
-      !formData.doctorName ||
-      !brand
-    )
-      return;
+  const handleGenerateUrl = async () => {
+    if (!formData.phone_number || !formData.name || !campaigns) return;
+    console.log(selectedCampaign)
+    const storedAuth = localStorage.getItem("user");
+    if (!storedAuth) throw new Error("User not authenticated");
 
-    const vcfContent = generateVCFContent(formData, selectedCampaign, brand);
-    const vcfBlob = new Blob([vcfContent], { type: "text/vcard" });
-    const vcfUrl = URL.createObjectURL(vcfBlob);
+    const { token } = JSON.parse(storedAuth);
 
-    const newUrl: GeneratedURL = {
-      id: Date.now().toString(),
-      campaignId: selectedCampaign.campaign_id.toString(),
-      campaignName: selectedCampaign.campaign_name,
-      doctorPhone: formData.doctorPhone,
-      doctorName: formData.doctorName,
-      description: formData.description,
-      logo: formData.logo ? URL.createObjectURL(formData.logo) : "",
-      patientUrl: `https://medflow.app/patient/${Math.random().toString(36).substring(7)}`,
-      vcfUrl,
-      generatedAt: new Date(),
-      isActive: true,
-    };
+    try {
+      const response = await fetch(
+        `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf/generate?campaign_id=${selectedCampaign.campaign_id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            phone_number: formData.phone_number,
+            email: formData.email,
+          }),
+        }
+      );
 
-    setGeneratedUrls([newUrl, ...generatedUrls]);
-    setFormData({
-      doctorPhone: "",
-      doctorName: "",
-      description: "",
-      logo: null,
-    });
-    setIsUrlModalOpen(false);
-    setSelectedCampaign(null);
-    toast.success("Patient URL generated successfully!");
+      if (!response.ok) {
+        toast.error("Failed to generate VCF file");
+        return;
+      }
+
+      const data = await response.json();
+      console.log(data)
+      const newUrl: GeneratedURL = {
+        id: Date.now().toString(),
+        campaignId: selectedCampaign.campaign_id,
+        campaignName: selectedCampaign.campaign_name,
+        phone_number: formData.phone_number,
+        name: formData.name,
+        email: formData.email,
+        patientUrl: `https://medflow.app/patient/${Math.random().toString(36).substring(7)}`,
+        vcfUrl: data.file_url,
+        generatedAt: new Date(),
+        isActive: true,
+      };
+
+      setGeneratedUrls([newUrl, ...generatedUrls]);
+      toast.success("Patient URL generated successfully!");
+
+    } catch (error) {
+      console.error("Error generating VCF:", error);
+      toast.error("An error occurred while generating the VCF file");
+    }
   };
 
   const handleCopyUrl = (url: string) => {
@@ -240,7 +252,7 @@ END:VCARD`;
   const handleDownloadVCF = (url: GeneratedURL) => {
     const link = document.createElement("a");
     link.href = url.vcfUrl;
-    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    link.download = `${url.name.replace(/\s+/g, "_")}_contact.vcf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -517,19 +529,19 @@ END:VCARD`;
                           <Avatar className="w-6 h-6">
                             <AvatarImage
                               src={urlData.logo}
-                              alt={urlData.doctorName}
+                              alt={urlData.name}
                             />
                             <AvatarFallback className="text-xs">
-                              {urlData.doctorName.charAt(0)}
+                              {urlData.name.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                         )}
                         <div>
                           <div className="font-medium text-sm">
-                            {urlData.doctorName}
+                            {urlData.name}
                           </div>
                           <div className="text-xs text-muted-foreground font-mono">
-                            {urlData.doctorPhone}
+                            {urlData.phone_number}
                           </div>
                         </div>
                       </div>
@@ -608,17 +620,17 @@ END:VCARD`;
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="doctorName">Doctor's Name</Label>
+              <Label htmlFor="name">Doctor's Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  id="doctorName"
+                  id="name"
                   placeholder="Dr. John Smith"
-                  value={formData.doctorName}
+                  value={formData.name}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      doctorName: e.target.value,
+                      name: e.target.value,
                     }))
                   }
                   className="pl-10"
@@ -626,18 +638,18 @@ END:VCARD`;
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="doctorPhone">Doctor's Phone Number</Label>
+              <Label htmlFor="phone_number">Doctor's Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  id="doctorPhone"
+                  id="phone_number"
                   type="tel"
                   placeholder="+1 (555) 123-4567"
-                  value={formData.doctorPhone}
+                  value={formData.phone_number}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      doctorPhone: e.target.value,
+                      phone_number: e.target.value,
                     }))
                   }
                   className="pl-10"
@@ -645,18 +657,17 @@ END:VCARD`;
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
                 placeholder="Additional information about the doctor or clinic"
-                value={formData.description}
+                value={formData.email}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    description: e.target.value,
+                    email: e.target.value,
                   }))
                 }
-                rows={3}
               />
             </div>
           </div>
@@ -667,10 +678,9 @@ END:VCARD`;
                 setIsUrlModalOpen(false);
                 setSelectedCampaign(null);
                 setFormData({
-                  doctorPhone: "",
-                  doctorName: "",
-                  description: "",
-                  logo: null,
+                  phone_number: "",
+                  name: "",
+                  email: "",
                 });
               }}
             >
@@ -678,7 +688,7 @@ END:VCARD`;
             </Button>
             <Button
               onClick={handleGenerateUrl}
-              disabled={!formData.doctorPhone || !formData.doctorName}
+              disabled={!formData.phone_number || !formData.name}
               className="gap-2"
             >
               <Link className="w-4 h-4" />

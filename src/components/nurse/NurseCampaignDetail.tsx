@@ -81,10 +81,9 @@ interface GeneratedURL {
   id: string;
   campaignId: string;
   campaignName: string;
-  doctorPhone: string;
-  doctorName: string;
-  description: string;
-  logo: string;
+  phone_number: string;
+  name: string;
+  email: string;
   patientUrl: string;
   vcfUrl: string;
   generatedAt: Date;
@@ -92,10 +91,9 @@ interface GeneratedURL {
 }
 
 interface URLFormData {
-  doctorPhone: string;
-  doctorName: string;
-  description: string;
-  logo: File | null;
+  phone_number: string;
+  name: string;
+  email: string;
 }
 
 // Fetch functions
@@ -155,10 +153,9 @@ const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [editingUrl, setEditingUrl] = useState<GeneratedURL | null>(null);
   const [formData, setFormData] = useState<URLFormData>({
-    doctorPhone: "",
-    doctorName: "",
-    description: "",
-    logo: null,
+    phone_number: "",
+    name: "",
+    email: "",
   });
 
   // Fetch campaign data
@@ -192,55 +189,73 @@ const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
   ) => {
     return `BEGIN:VCARD
 VERSION:3.0
-FN:${data.doctorName}
-TEL:${data.doctorPhone}
-NOTE:${data.description}
+FN:${data.name}
+TEL:${data.phone_number}
+NOTE:${data.email}
 ORG:${brand.brand_name}
 TITLE:${campaign.campaign_name}
 END:VCARD`;
   };
 
-  const handleGenerateUrl = () => {
-    if (!formData.doctorPhone || !formData.doctorName || !campaign || !brand)
-      return;
+  const handleGenerateUrl = async () => {
+    if (!formData.phone_number || !formData.name || !campaign) return;
 
-    const vcfContent = generateVCFContent(formData, campaign, brand);
-    const vcfBlob = new Blob([vcfContent], { type: "text/vcard" });
-    const vcfUrl = URL.createObjectURL(vcfBlob);
+    const storedAuth = localStorage.getItem("user");
+    if (!storedAuth) throw new Error("User not authenticated");
 
-    const newUrl: GeneratedURL = {
-      id: editingUrl?.id || Date.now().toString(),
-      campaignId: campaign.campaign_id.toString(),
-      campaignName: campaign.campaign_name,
-      doctorPhone: formData.doctorPhone,
-      doctorName: formData.doctorName,
-      description: formData.description,
-      logo: formData.logo ? URL.createObjectURL(formData.logo) : "",
-      patientUrl: `https://medflow.app/patient/${Math.random().toString(36).substring(7)}`,
-      vcfUrl,
-      generatedAt: new Date(),
-      isActive: true,
-    };
+    const { token } = JSON.parse(storedAuth);
 
-    if (editingUrl) {
-      setGeneratedUrls(
-        generatedUrls.map((url) => (url.id === editingUrl.id ? newUrl : url)),
+    try {
+      const response = await fetch(
+        `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf/generate?campaign_id=${campaign.campaign_id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            phone_number: formData.phone_number,
+            email: formData.email,
+          }),
+        }
       );
-      toast.success("Patient URL updated successfully!");
-    } else {
+
+      if (!response.ok) {
+        toast.error("Failed to generate VCF file");
+        return;
+      }
+
+      const data = await response.json();
+      console.log(data)
+      const newUrl: GeneratedURL = {
+        id: Date.now().toString(),
+        campaignId: campaign.campaign_id.toString(),
+        campaignName: campaign.campaign_name,
+        phone_number: formData.phone_number,
+        name: formData.name,
+        email: formData.email,
+        patientUrl: `https://medflow.app/patient/${Math.random().toString(36).substring(7)}`,
+        vcfUrl: data.file_url,
+        generatedAt: new Date(),
+        isActive: true,
+      };
+
       setGeneratedUrls([newUrl, ...generatedUrls]);
       toast.success("Patient URL generated successfully!");
-    }
 
-    resetForm();
+    } catch (error) {
+      console.error("Error generating VCF:", error);
+      toast.error("An error occurred while generating the VCF file");
+    }
   };
 
   const resetForm = () => {
     setFormData({
-      doctorPhone: "",
-      doctorName: "",
-      description: "",
-      logo: null,
+      phone_number: "",
+      name: "",
+      email: "",
     });
     setIsUrlModalOpen(false);
     setEditingUrl(null);
@@ -249,10 +264,9 @@ END:VCARD`;
   const handleEditUrl = (url: GeneratedURL) => {
     setEditingUrl(url);
     setFormData({
-      doctorPhone: url.doctorPhone,
-      doctorName: url.doctorName,
-      description: url.description,
-      logo: null, // Can't restore file input
+      phone_number: url.phone_number,
+      name: url.name,
+      email: url.email,
     });
     setIsUrlModalOpen(true);
   };
@@ -265,7 +279,7 @@ END:VCARD`;
   const handleDownloadVCF = (url: GeneratedURL) => {
     const link = document.createElement("a");
     link.href = url.vcfUrl;
-    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    link.download = `${url.name.replace(/\s+/g, "_")}_contact.vcf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -414,130 +428,126 @@ END:VCARD`;
       </div>
 
       {/* Generated URLs Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generated Contact cards</CardTitle>
-          <CardDescription>
-            Track and manage URLs you've generated for this campaign
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Doctor Info</TableHead>
-                <TableHead>Patient URL</TableHead>
-                <TableHead>Generated</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {generatedUrls.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No URLs generated yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                generatedUrls.map((urlData) => (
-                  <TableRow key={urlData.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        {urlData.logo && (
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage
-                              src={urlData.logo}
-                              alt={urlData.doctorName}
-                            />
-                            <AvatarFallback>
-                              {urlData.doctorName.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div>
-                          <div className="font-medium">
-                            {urlData.doctorName}
-                          </div>
-                          <div className="text-sm text-muted-foreground font-mono">
-                            {urlData.doctorPhone}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                          {urlData.patientUrl}
-                        </code>
-                        <Button
-                          onClick={() => handleCopyUrl(urlData.patientUrl)}
-                          size="sm"
-                          variant="ghost"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {urlData.generatedAt.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={urlData.isActive ? "default" : "secondary"}
-                      >
-                        {urlData.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center gap-2 justify-end">
-                        <Button
-                          onClick={() => handleEditUrl(urlData)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() => handleDownloadVCF(urlData)}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            window.open(urlData.patientUrl, "_blank")
-                          }
-                          size="sm"
-                          variant="outline"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/*<Card>*/}
+      {/*  <CardHeader>*/}
+      {/*    <CardTitle>Generated Contact cards</CardTitle>*/}
+      {/*    <CardDescription>*/}
+      {/*      Track and manage URLs you've generated for this campaign*/}
+      {/*    </CardDescription>*/}
+      {/*  </CardHeader>*/}
+      {/*  <CardContent>*/}
+      {/*    <Table>*/}
+      {/*      <TableHeader>*/}
+      {/*        <TableRow>*/}
+      {/*          <TableHead>Doctor Info</TableHead>*/}
+      {/*          <TableHead>Patient URL</TableHead>*/}
+      {/*          <TableHead>Generated</TableHead>*/}
+      {/*          <TableHead>Status</TableHead>*/}
+      {/*          <TableHead className="text-right">Actions</TableHead>*/}
+      {/*        </TableRow>*/}
+      {/*      </TableHeader>*/}
+      {/*      <TableBody>*/}
+      {/*        {generatedUrls.length === 0 ? (*/}
+      {/*          <TableRow>*/}
+      {/*            <TableCell*/}
+      {/*              colSpan={5}*/}
+      {/*              className="text-center py-8 text-muted-foreground"*/}
+      {/*            >*/}
+      {/*              No URLs generated yet*/}
+      {/*            </TableCell>*/}
+      {/*          </TableRow>*/}
+      {/*        ) : (*/}
+      {/*          generatedUrls.map((urlData) => (*/}
+      {/*            <TableRow key={urlData.id}>*/}
+      {/*              <TableCell>*/}
+      {/*                <div className="flex items-center space-x-3">*/}
+      {/*                  {urlData.logo && (*/}
+      {/*                    <Avatar className="w-8 h-8">*/}
+      {/*                      <AvatarImage*/}
+      {/*                        src={urlData.logo}*/}
+      {/*                        alt={urlData.doctorName}*/}
+      {/*                      />*/}
+      {/*                      <AvatarFallback>*/}
+      {/*                        {urlData.doctorName.charAt(0)}*/}
+      {/*                      </AvatarFallback>*/}
+      {/*                    </Avatar>*/}
+      {/*                  )}*/}
+      {/*                  <div>*/}
+      {/*                    <div className="font-medium">*/}
+      {/*                      {urlData.doctorName}*/}
+      {/*                    </div>*/}
+      {/*                    <div className="text-sm text-muted-foreground font-mono">*/}
+      {/*                      {urlData.doctorPhone}*/}
+      {/*                    </div>*/}
+      {/*                  </div>*/}
+      {/*                </div>*/}
+      {/*              </TableCell>*/}
+      {/*              <TableCell>*/}
+      {/*                <div className="flex items-center space-x-2">*/}
+      {/*                  <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">*/}
+      {/*                    {urlData.patientUrl}*/}
+      {/*                  </code>*/}
+      {/*                  <Button*/}
+      {/*                    onClick={() => handleCopyUrl(urlData.patientUrl)}*/}
+      {/*                    size="sm"*/}
+      {/*                    variant="ghost"*/}
+      {/*                  >*/}
+      {/*                    <Copy className="w-4 h-4" />*/}
+      {/*                  </Button>*/}
+      {/*                </div>*/}
+      {/*              </TableCell>*/}
+      {/*              <TableCell>*/}
+      {/*                {urlData.generatedAt.toLocaleDateString()}*/}
+      {/*              </TableCell>*/}
+      {/*              <TableCell>*/}
+      {/*                <Badge*/}
+      {/*                  variant={urlData.isActive ? "default" : "secondary"}*/}
+      {/*                >*/}
+      {/*                  {urlData.isActive ? "Active" : "Inactive"}*/}
+      {/*                </Badge>*/}
+      {/*              </TableCell>*/}
+      {/*              <TableCell className="text-right">*/}
+      {/*                <div className="flex items-center gap-2 justify-end">*/}
+      {/*                  <Button*/}
+      {/*                    onClick={() => handleEditUrl(urlData)}*/}
+      {/*                    size="sm"*/}
+      {/*                    variant="outline"*/}
+      {/*                  >*/}
+      {/*                    <Edit className="w-4 h-4" />*/}
+      {/*                  </Button>*/}
+      {/*                  <Button*/}
+      {/*                    onClick={() => handleDownloadVCF(urlData)}*/}
+      {/*                    size="sm"*/}
+      {/*                    variant="outline"*/}
+      {/*                  >*/}
+      {/*                    <Download className="w-4 h-4" />*/}
+      {/*                  </Button>*/}
+      {/*                  <Button*/}
+      {/*                    onClick={() =>*/}
+      {/*                      window.open(urlData.patientUrl, "_blank")*/}
+      {/*                    }*/}
+      {/*                    size="sm"*/}
+      {/*                    variant="outline"*/}
+      {/*                  >*/}
+      {/*                    <ExternalLink className="w-4 h-4" />*/}
+      {/*                  </Button>*/}
+      {/*                </div>*/}
+      {/*              </TableCell>*/}
+      {/*            </TableRow>*/}
+      {/*          ))*/}
+      {/*        )}*/}
+      {/*      </TableBody>*/}
+      {/*    </Table>*/}
+      {/*  </CardContent>*/}
+      {/*</Card>*/}
 
       {/* Generate URL Modal */}
       <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingUrl ? "Edit Patient URL" : "Generate Patient URL"}
-            </DialogTitle>
+            <DialogTitle>Generate Patient URL</DialogTitle>
             <DialogDescription>
-              {editingUrl
-                ? "Update the patient URL information"
-                : "Create a unique URL and VCF card for a patient"}
+              Create a unique URL and VCF card for a patient
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -545,23 +555,23 @@ END:VCARD`;
               <Label>Campaign</Label>
               <div className="p-3 bg-muted rounded-lg">
                 <div className="font-medium">{campaign.campaign_name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {brand?.brand_name}
-                </div>
+                {/*<div className="text-sm text-muted-foreground">*/}
+                {/*  Brand {campaign.campaign_id}*/}
+                {/*</div>*/}
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="doctorName">Doctor's Name</Label>
+              <Label htmlFor="name">Doctor's Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  id="doctorName"
+                  id="name"
                   placeholder="Dr. John Smith"
-                  value={formData.doctorName}
+                  value={formData.name}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      doctorName: e.target.value,
+                      name: e.target.value,
                     }))
                   }
                   className="pl-10"
@@ -573,14 +583,14 @@ END:VCARD`;
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  id="doctorPhone"
+                  id="phone_number"
                   type="tel"
                   placeholder="+1 (555) 123-4567"
-                  value={formData.doctorPhone}
+                  value={formData.phone_number}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      doctorPhone: e.target.value,
+                      phone_number: e.target.value,
                     }))
                   }
                   className="pl-10"
@@ -588,32 +598,31 @@ END:VCARD`;
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
                 placeholder="Additional information about the doctor or clinic"
-                value={formData.description}
+                value={formData.email}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    description: e.target.value,
+                    email: e.target.value,
                   }))
                 }
-                rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>
+            <Button variant="outline">
               Cancel
             </Button>
             <Button
               onClick={handleGenerateUrl}
-              disabled={!formData.doctorPhone || !formData.doctorName}
+              disabled={!formData.phone_number || !formData.name}
               className="gap-2"
             >
               <Link className="w-4 h-4" />
-              {editingUrl ? "Update URL" : "Generate URL"}
+              Generate URL
             </Button>
           </DialogFooter>
         </DialogContent>

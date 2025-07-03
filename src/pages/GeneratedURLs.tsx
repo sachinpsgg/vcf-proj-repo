@@ -120,7 +120,7 @@ const GeneratedURLs = () => {
   const [searchParams] = useSearchParams();
   const campaignId = searchParams.get("campaignId");
   const campaignName = searchParams.get("campaignName");
-
+  console.log(campaignId,campaignName)
   const [user, setUser] = useState<User | null>(null);
   const [generatedUrls, setGeneratedUrls] =
     useState<GeneratedURL[]>(mockGeneratedUrls);
