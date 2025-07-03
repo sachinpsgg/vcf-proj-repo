@@ -201,6 +201,7 @@ const CampaignDetailSection = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [patientUrl, setPatientUrl] = useState("");
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [formData, setFormData] = useState<URLFormData>({
     name: "",
@@ -291,7 +292,7 @@ END:VCARD`;
       }
 
       const data = await response.json();
-      console.log(data)
+      setPatientUrl(data.file_url);
       const newUrl: GeneratedURL = {
         id: Date.now().toString(),
         campaignId: campaign.campaign_id.toString(),
@@ -307,7 +308,7 @@ END:VCARD`;
 
       setGeneratedUrls([newUrl, ...generatedUrls]);
       toast.success("Patient URL generated successfully!");
-      resetUrlForm();
+      // resetUrlForm();
     } catch (error) {
       console.error("Error generating VCF:", error);
       toast.error("An error occurred while generating the VCF file");
@@ -332,7 +333,7 @@ END:VCARD`;
   const handleDownloadVCF = (url: GeneratedURL) => {
     const link = document.createElement("a");
     link.href = url.vcfUrl;
-    link.download = `${url.doctorName.replace(/\s+/g, "_")}_contact.vcf`;
+    link.download = `${url.phone_number.replace(/\s+/g, "_")}_contact.vcf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -722,15 +723,17 @@ END:VCARD`;
             <DialogDescription>
               Create a unique URL and VCF card for a patient
             </DialogDescription>
+            {patientUrl && (
+              <div className="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm break-all">
+                URL: <a href={patientUrl} target="_blank" rel="noopener noreferrer" className="underline">{patientUrl}</a>
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Campaign</Label>
               <div className="p-3 bg-muted rounded-lg">
                 <div className="font-medium">{campaign.campaign_name}</div>
-                {/*<div className="text-sm text-muted-foreground">*/}
-                {/*  Brand {campaign.campaign_id}*/}
-                {/*</div>*/}
               </div>
             </div>
             <div className="space-y-2">

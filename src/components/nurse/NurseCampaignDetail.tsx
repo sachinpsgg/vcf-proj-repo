@@ -152,6 +152,7 @@ const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
   const [editingUrl, setEditingUrl] = useState<GeneratedURL | null>(null);
+  const [patientUrl, setPatientUrl] = useState("");
   const [formData, setFormData] = useState<URLFormData>({
     phone_number: "",
     name: "",
@@ -228,6 +229,7 @@ END:VCARD`;
       }
 
       const data = await response.json();
+      setPatientUrl(data.file_url);
       console.log(data)
       const newUrl: GeneratedURL = {
         id: Date.now().toString(),
@@ -549,6 +551,11 @@ END:VCARD`;
             <DialogDescription>
               Create a unique URL and VCF card for a patient
             </DialogDescription>
+            {patientUrl && (
+              <div className="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm break-all">
+                URL: <a href={patientUrl} target="_blank" rel="noopener noreferrer" className="underline">{patientUrl}</a>
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
