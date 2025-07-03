@@ -410,11 +410,48 @@ const CampaignFormModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const storedAuth = localStorage.getItem("user");
+    if (!storedAuth) throw new Error("User not authenticated");
 
+    const { token } = JSON.parse(storedAuth);
     if (form.brand_id === 0) {
       toast.error("Please select a brand");
       return;
     }
+    if (status === "prod") {
+      try {
+        const response = await fetch(
+          `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/assign-multiple-nurses?campaign_id=${form.campaign_id}&brand_id=${form.brand_id}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              nurse_ids: form.nurse_ids,
+            }),
+          }
+        );
+
+        const data = await response.json();
+        console.log(data)
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to assign nurses");
+        }
+
+        toast.success("Nurses successfully assigned to campaign");
+      } catch (error: any) {
+        toast.error(
+          error.message ||
+          `Failed to ${isEditing ? "update" : "create"} campaign`
+        );
+      } finally {
+        onClose();
+      }
+      return;
+    }
+
 
     let finalLogoUrl = form.logo_url;
 
@@ -431,13 +468,12 @@ const CampaignFormModal = ({
         await createCampaign(campaignData);
         toast.success("Campaign created successfully!");
       }
-
       onSubmit(campaignData);
       onClose();
     } catch (error: any) {
       toast.error(
         error.message ||
-          `Failed to ${isEditing ? "update" : "create"} campaign`,
+        `Failed to ${isEditing ? "update" : "create"} campaign`,
       );
     } finally {
       setIsUploadingImage(false);
@@ -542,17 +578,6 @@ const CampaignFormModal = ({
                   className="flex-1"
                   disabled={isUploadingImage || status==='prod'}
                 />
-                {/*<Button*/}
-                {/*  type="button"*/}
-                {/*  size="icon"*/}
-                {/*  variant="outline"*/}
-                {/*  onClick={() =>*/}
-                {/*    document.querySelector('input[type="file"]')?.click()*/}
-                {/*  }*/}
-                {/*  disabled={isUploadingImage}*/}
-                {/*>*/}
-                {/*  <Upload className="w-4 h-4" />*/}
-                {/*</Button>*/}
               </div>
 
               {selectedImage && (
@@ -676,18 +701,26 @@ const CampaignFormModal = ({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
-            >
-              {isUploadingImage
-                ? "Uploading..."
-                : isLoadingBrands || isLoadingNurses
-                  ? "Loading..."
-                  : isEditing
-                    ? "Update Campaign"
-                    : "Create Campaign"}
-            </Button>
+            {
+              status === "prod" ? (
+                <Button type="submit">
+                  Assign Nurses
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isUploadingImage || isLoadingBrands || isLoadingNurses}
+                >
+                  {isUploadingImage
+                    ? "Uploading..."
+                    : isLoadingBrands || isLoadingNurses
+                      ? "Loading..."
+                      : isEditing
+                        ? "Update Campaign"
+                        : "Create Campaign"}
+                </Button>
+              )
+            }
           </DialogFooter>
         </form>
       </DialogContent>

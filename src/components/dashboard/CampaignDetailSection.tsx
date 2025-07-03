@@ -594,16 +594,28 @@ END:VCARD`;
               )}
 
               {campaign.campaignStatus?.toLowerCase() === "prod" && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    handleToggleStatus();
-                  }}
-                  className="text-destructive"
-                >
-                  <PowerOff className="mr-2 h-4 w-4" />
-                  Deactivate Campaign
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      openEditModal();
+                    }}
+                    className=""
+                  >
+                    <PowerOff className="mr-2 h-4 w-4" />
+                    Edit Campaign
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      handleToggleStatus();
+                    }}
+                    className="text-destructive"
+                  >
+                    <PowerOff className="mr-2 h-4 w-4" />
+                    Deactivate Campaign
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

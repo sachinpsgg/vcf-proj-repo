@@ -119,7 +119,8 @@ const fetchAdmins = async (): Promise<AdminApiData[]> => {
   }
 
   const data = await response.json();
-  return data.admins || [];
+  console.log(data.admins);
+  return data?.admins || [];
 };
 
 // Transform API data to component format
@@ -143,10 +144,12 @@ const transformAdminData = (admin: AdminApiData): User => ({
   password: "", // Not provided by API
   role: "admin",
   status: admin.userStatus === "active" ? "Active" : "Inactive",
-  assignedBrands: [{ id: admin.brand_id.toString(), name: admin.brand_name }],
+  assignedBrands: admin.brands.map((brand) => ({
+    id: brand.brand_id.toString(),
+    name: brand.brand_name,
+  })),
   createdAt: new Date(admin.created_at),
 });
-
 const UsersSection = ({ activeTab, userRole }: UsersSectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -180,7 +183,7 @@ const UsersSection = ({ activeTab, userRole }: UsersSectionProps) => {
   // Transform data
   const nurses = nursesData?.map(transformNurseData) || [];
   const admins = adminsData?.map(transformAdminData) || [];
-
+  console.log(adminsData);
   const handleCreateUser = async (userData: {
     firstName: string;
     lastName: string;

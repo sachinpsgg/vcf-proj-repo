@@ -98,6 +98,7 @@ const fetchNurseCampaigns = async (): Promise<NurseCampaignApiData[]> => {
   }
 
   const data = await response.json();
+  console.log(data)
   return data.campaigns || [];
 };
 
@@ -271,6 +272,7 @@ const DashboardLayout = ({
     } else if (userRole === "nurse") {
       // For nurse, hide campaign subitems when viewing details
       if (hideDetailNavigation) {
+        console.log(nurseBrand)
         return [
           {
             icon: Building2,
