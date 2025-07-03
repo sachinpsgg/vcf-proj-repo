@@ -68,12 +68,14 @@ interface CampaignPayload {
 }
 
 const CampaignFormModal = ({
+  status,
   isOpen,
   onClose,
   onSubmit,
   initialData,
   isEditing,
 }: {
+  status: string;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CampaignPayload) => void;
@@ -95,7 +97,6 @@ const CampaignFormModal = ({
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // API data states
   const [brands, setBrands] = useState<Brand[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [isLoadingBrands, setIsLoadingBrands] = useState(false);
@@ -445,7 +446,7 @@ const CampaignFormModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Campaign" : "Create Campaign"}
@@ -463,6 +464,7 @@ const CampaignFormModal = ({
             <div>
               <Label>Campaign Name</Label>
               <Input
+                disabled={status==='prod'}
                 required
                 value={form.name || ""}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -473,10 +475,11 @@ const CampaignFormModal = ({
               <Label>Brand</Label>
               <Select
                 value={String(form.brand_id || 0)}
+
                 onValueChange={(v) =>
                   setForm({ ...form, brand_id: parseInt(v, 10) || 0 })
                 }
-                disabled={isLoadingBrands}
+                disabled={isLoadingBrands || status==='prod'}
               >
                 <SelectTrigger>
                   <SelectValue
@@ -506,6 +509,7 @@ const CampaignFormModal = ({
             <div>
               <Label>Campaign URL</Label>
               <Input
+                disabled={status==='prod'}
                 value={form.campaign_url || ""}
                 onChange={(e) =>
                   setForm({ ...form, campaign_url: e.target.value })
@@ -516,6 +520,7 @@ const CampaignFormModal = ({
             <div>
               <Label>Work Phone Number</Label>
               <Input
+                disabled={status==='prod'}
                 type="tel"
                 value={form.work_number || ""}
                 onChange={(e) =>
@@ -535,19 +540,19 @@ const CampaignFormModal = ({
                   accept="image/*"
                   onChange={handleImageChange}
                   className="flex-1"
-                  disabled={isUploadingImage}
+                  disabled={isUploadingImage || status==='prod'}
                 />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  onClick={() =>
-                    document.querySelector('input[type="file"]')?.click()
-                  }
-                  disabled={isUploadingImage}
-                >
-                  <Upload className="w-4 h-4" />
-                </Button>
+                {/*<Button*/}
+                {/*  type="button"*/}
+                {/*  size="icon"*/}
+                {/*  variant="outline"*/}
+                {/*  onClick={() =>*/}
+                {/*    document.querySelector('input[type="file"]')?.click()*/}
+                {/*  }*/}
+                {/*  disabled={isUploadingImage}*/}
+                {/*>*/}
+                {/*  <Upload className="w-4 h-4" />*/}
+                {/*</Button>*/}
               </div>
 
               {selectedImage && (
@@ -576,6 +581,7 @@ const CampaignFormModal = ({
           <div>
             <Label>Notes</Label>
             <Textarea
+              disabled={status==='prod'}
               rows={3}
               value={form.notes || ""}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}

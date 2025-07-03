@@ -192,15 +192,16 @@ const fetchCampaignNurses = async (
 };
 
 const CampaignDetailSection = ({
-  campaignId,
-  userRole,
-  onBack,
-}: CampaignDetailSectionProps) => {
+                                 campaignId,
+                                 userRole,
+                                 onBack,
+                               }: CampaignDetailSectionProps) => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPublishWarningOpen, setIsPublishWarningOpen] = useState(false);
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [patientUrl, setPatientUrl] = useState("");
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
   const [formData, setFormData] = useState<URLFormData>({
@@ -236,6 +237,7 @@ const CampaignDetailSection = ({
   const handleEditCampaign = async (campaignData: CampaignPayload) => {
     // The API call is now handled inside the modal
     setIsModalOpen(false);
+    setIsDropdownOpen(false);
     refetchCampaign();
     refetchNurses();
   };
@@ -243,6 +245,7 @@ const CampaignDetailSection = ({
   const handleCreateCampaign = (campaignData: CampaignPayload) => {
     // The API call is now handled inside the modal
     setIsModalOpen(false);
+    setIsDropdownOpen(false);
     refetchCampaign();
   };
 
@@ -283,7 +286,7 @@ END:VCARD`;
             phone_number: formData.phone_number,
             email: formData.email,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -314,7 +317,6 @@ END:VCARD`;
       toast.error("An error occurred while generating the VCF file");
     }
   };
-
 
   const resetUrlForm = () => {
     setFormData({
@@ -361,7 +363,7 @@ END:VCARD`;
       const numericId = campaignId.replace("campaign-", "");
 
       const response = await fetch(
-       "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/campaign/update",
         {
           method: "PUT",
           headers: {
@@ -370,7 +372,7 @@ END:VCARD`;
           },
           body: JSON.stringify({
             campaign_id: parseInt(numericId, 10),
-            campaignStatus: "prod"
+            campaignStatus: "prod",
           }),
         },
       );
@@ -417,6 +419,41 @@ END:VCARD`;
       nurse_ids: nurses?.map((nurse) => nurse.user_id) || [],
       work_number: campaign.work_number || "",
     };
+  };
+  const handleRevokeNurse = async (nurseId: number) => {
+    const storedAuth = localStorage.getItem("user");
+    if (!storedAuth) throw new Error("User not authenticated");
+
+    const { token } = JSON.parse(storedAuth);
+    const payload = {
+      nurse_ids: [nurseId],
+      brand_id: campaign.brand_id,     // Ensure brandId is available in your component
+      campaign_id: campaign.campaign_id, // Ensure campaignId is available in your component
+    };
+    console.log(payload)
+    try {
+      const response = await fetch(
+        "https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/nurse/revoke",
+        {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to revoke nurse");
+      }
+
+      toast.success("nurse revoked")
+    } catch (error) {
+      toast.error(error.message || "Failed to revoke nurse");
+    }
   };
 
   const openEditModal = () => {
@@ -513,29 +550,44 @@ END:VCARD`;
           >
             {campaign.campaignStatus.toUpperCase()}
           </Badge>
-          <DropdownMenu>
+          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <MoreHorizontal className="h-4 w-4" />
                 Actions
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={openCreateModal}>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  openCreateModal();
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Create New Campaign
               </DropdownMenuItem>
 
               {(campaign.campaignStatus?.toLowerCase() === "draft" ||
                 campaign.campaignStatus?.toLowerCase() === "uat") && (
-                <DropdownMenuItem onClick={openEditModal}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    openEditModal();
+                  }}
+                >
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Campaign
                 </DropdownMenuItem>
               )}
 
               {campaign.campaignStatus?.toLowerCase() === "uat" && (
-                <DropdownMenuItem onClick={() => setIsPublishWarningOpen(true)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    setIsPublishWarningOpen(true);
+                  }}
+                >
                   <Send className="mr-2 h-4 w-4" />
                   Publish to Production
                 </DropdownMenuItem>
@@ -543,7 +595,10 @@ END:VCARD`;
 
               {campaign.campaignStatus?.toLowerCase() === "prod" && (
                 <DropdownMenuItem
-                  onClick={handleToggleStatus}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    handleToggleStatus();
+                  }}
                   className="text-destructive"
                 >
                   <PowerOff className="mr-2 h-4 w-4" />
@@ -570,7 +625,6 @@ END:VCARD`;
               Assigned team members
             </p>
           </CardContent>
-
         </Card>
 
         <Card>
@@ -650,6 +704,7 @@ END:VCARD`;
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead>Action</TableHead> {/* New column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -665,19 +720,15 @@ END:VCARD`;
                             </AvatarFallback>
                           </Avatar>
                           <span className="font-medium">
-                            {nurse.first_name} {nurse.last_name}
-                          </span>
+                {nurse.first_name} {nurse.last_name}
+              </span>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {nurse.email}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{nurse.email}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            nurse.userStatus === "active"
-                              ? "default"
-                              : "secondary"
+                            nurse.userStatus === "active" ? "default" : "secondary"
                           }
                         >
                           {nurse.userStatus}
@@ -686,28 +737,39 @@ END:VCARD`;
                       <TableCell>
                         {new Date(nurse.created_at).toLocaleDateString()}
                       </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="destructive"
+                          className="cursor-pointer"
+                          onClick={() => handleRevokeNurse(nurse.user_id)}
+                        >
+                          Revoke
+                        </Badge>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center py-4 text-muted-foreground"
-                    >
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
                       No nurses assigned to this campaign
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+
           )}
         </CardContent>
       </Card>
 
       {/* Campaign Form Modal */}
       <CampaignFormModal
+        status={campaign.campaignStatus}
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setIsDropdownOpen(false);
+        }}
         onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}
         initialData={
           isEditing && campaign ? formatCampaignForEdit(campaign) : null
@@ -725,7 +787,15 @@ END:VCARD`;
             </DialogDescription>
             {patientUrl && (
               <div className="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm break-all">
-                URL: <a href={patientUrl} target="_blank" rel="noopener noreferrer" className="underline">{patientUrl}</a>
+                URL:{" "}
+                <a
+                  href={patientUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {patientUrl}
+                </a>
               </div>
             )}
           </DialogHeader>
