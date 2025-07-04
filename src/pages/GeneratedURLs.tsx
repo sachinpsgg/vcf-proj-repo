@@ -648,7 +648,7 @@ const GeneratedURLs = () => {
     const fetchGeneratedURLs = async () => {
       try {
         const response = await fetch(
-          `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf?campaign_id=${campaignId || 1}`,
+          `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf`,
           {
             headers: {
               Authorization: `Bearer ${parsedUser.token}`,
@@ -671,7 +671,7 @@ const GeneratedURLs = () => {
           isActive: true,
           generatedBy: item.created_by,
         }));
-
+        console.log(data)
         setGeneratedUrls(formattedData);
       } catch (error) {
         console.error(error);
