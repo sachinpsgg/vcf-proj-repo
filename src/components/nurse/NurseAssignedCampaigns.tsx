@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -244,7 +244,48 @@ END:VCARD`;
       toast.error("An error occurred while generating the VCF file");
     }
   };
+  useEffect(() => {
+    const fetchGeneratedURLs = async () => {
 
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+      try {
+        const response = await fetch(
+          `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch generated URLs");
+        const data = await response.json();
+
+        const formattedData: GeneratedURL[] = data.data.map((item: any) => ({
+          id: item.vcf_id.toString(),
+          campaignId: item.campaign_id.toString(),
+          campaignName: item.campaign_name,
+          doctorPhone: item.doctor_phone_number,
+          doctorName: `${item.creator_first_name} ${item.creator_last_name || ""}`.trim(),
+          patientUrl: item.file_url,
+          vcfUrl: item.file_url,
+          generatedAt: new Date(item.generated_at),
+          isActive: true,
+          generatedBy: item.created_by,
+        }));
+        console.log(data)
+        setGeneratedUrls(formattedData);
+      } catch (error) {
+        console.error(error);
+        toast.error("Unable to load generated URLs");
+      }
+    };
+
+    fetchGeneratedURLs();
+  }, []);
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
     toast.success("URL copied to clipboard!");

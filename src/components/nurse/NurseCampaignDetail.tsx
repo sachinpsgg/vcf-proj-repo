@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -183,21 +183,48 @@ const NurseCampaignDetail = ({ campaignId }: NurseCampaignDetailProps) => {
     setFormData((prev) => ({ ...prev, logo: file }));
   };
 
-  const generateVCFContent = (
-    data: URLFormData,
-    campaign: CampaignApiData,
-    brand: BrandApiData,
-  ) => {
-    return `BEGIN:VCARD
-VERSION:3.0
-FN:${data.name}
-TEL:${data.phone_number}
-NOTE:${data.email}
-ORG:${brand.brand_name}
-TITLE:${campaign.campaign_name}
-END:VCARD`;
-  };
+  useEffect(() => {
+    const fetchGeneratedURLs = async () => {
 
+      const storedAuth = localStorage.getItem("user");
+      if (!storedAuth) throw new Error("User not authenticated");
+
+      const { token } = JSON.parse(storedAuth);
+      try {
+        const response = await fetch(
+          `https://1q34qmastc.execute-api.us-east-1.amazonaws.com/dev/vcf?campaign_id=${campaignId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to fetch generated URLs");
+        const data = await response.json();
+
+        const formattedData: GeneratedURL[] = data.data.map((item: any) => ({
+          id: item.vcf_id.toString(),
+          campaignId: item.campaign_id.toString(),
+          campaignName: item.campaign_name,
+          doctorPhone: item.doctor_phone_number,
+          doctorName: `${item.creator_first_name} ${item.creator_last_name || ""}`.trim(),
+          patientUrl: item.file_url,
+          vcfUrl: item.file_url,
+          generatedAt: new Date(item.generated_at),
+          isActive: true,
+          generatedBy: item.created_by,
+        }));
+        console.log(data)
+        setGeneratedUrls(formattedData);
+      } catch (error) {
+        console.error(error);
+        toast.error("Unable to load generated URLs");
+      }
+    };
+
+    fetchGeneratedURLs();
+  }, [campaignId]);
   const handleGenerateUrl = async () => {
     if (!formData.phone_number || !formData.name || !campaign) return;
 
@@ -252,7 +279,6 @@ END:VCARD`;
       toast.error("An error occurred while generating the VCF file");
     }
   };
-
   const resetForm = () => {
     setFormData({
       phone_number: "",
@@ -261,31 +287,6 @@ END:VCARD`;
     });
     setIsUrlModalOpen(false);
     setEditingUrl(null);
-  };
-
-  const handleEditUrl = (url: GeneratedURL) => {
-    setEditingUrl(url);
-    setFormData({
-      phone_number: url.phone_number,
-      name: url.name,
-      email: url.email,
-    });
-    setIsUrlModalOpen(true);
-  };
-
-  const handleCopyUrl = (url: string) => {
-    navigator.clipboard.writeText(url);
-    toast.success("URL copied to clipboard!");
-  };
-
-  const handleDownloadVCF = (url: GeneratedURL) => {
-    const link = document.createElement("a");
-    link.href = url.vcfUrl;
-    link.download = `${url.name.replace(/\s+/g, "_")}_contact.vcf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("VCF card downloaded!");
   };
 
   if (campaignLoading || brandLoading) {
