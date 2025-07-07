@@ -379,6 +379,7 @@ const DashboardLayout = ({
                   onClick={() => {
                     if (item.subItems) {
                       toggleExpanded(item.id);
+                      handleBackToMain()
                     } else {
                       handleItemClick(item.id);
                     }

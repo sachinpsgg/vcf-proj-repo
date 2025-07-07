@@ -136,6 +136,7 @@ const BrandFormModal = ({
     }
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
