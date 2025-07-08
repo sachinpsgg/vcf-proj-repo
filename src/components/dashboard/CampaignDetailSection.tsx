@@ -71,6 +71,7 @@ import {
 import CampaignFormModal from "@/components/forms/CampaignFormModal";
 import type { CampaignStatus } from "@/components/dashboard/CampaignsSection";
 import { toast } from "sonner";
+import { GenerateForm } from "@/components/GenerateForm.tsx";
 
 interface CampaignDetailSectionProps {
   campaignId: string;
@@ -204,6 +205,7 @@ const CampaignDetailSection = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [patientUrl, setPatientUrl] = useState("");
   const [generatedUrls, setGeneratedUrls] = useState<GeneratedURL[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<URLFormData>({
     name: "",
     phone_number: "",
@@ -490,425 +492,335 @@ END:VCARD`;
       </div>
     );
   }
-
   return (
-    <div className="space-y-6">
-      {/* Back Button */}
-      {onBack && (
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="gap-2 hover:bg-muted"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </div>
-      )}
-
-      {/* Status Badge */}
-
-      {/* Campaign Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <Avatar className="w-20 h-20">
-            <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
-            <AvatarFallback className="text-xl">
-              {campaign.campaign_name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {campaign.campaign_name}
-            </h1>
-            <div className="flex items-center space-x-4 mt-3">
-              <Badge
-                variant="secondary"
-                className="text-base px-3 py-1 font-semibold"
+    <>
+      {showForm?
+      <>
+        <GenerateForm setShowForm={setShowForm} campaign={campaign} userRole={userRole}/>
+      </>
+      :
+      <>
+        <div className="space-y-6">
+          {/* Back Button */}
+          {onBack && (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={onBack}
+                className="gap-2 hover:bg-muted"
               >
-                <Building2 className="w-4 h-4 mr-2" />
-                Brand {campaign.brand_id}
-              </Badge>
-              {campaign.work_number && (
-                <div className="flex items-center text-muted-foreground">
-                  <Phone className="w-4 h-4 mr-1" />
-                  {campaign.work_number}
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </div>
+          )}
+
+          {/* Status Badge */}
+
+          {/* Campaign Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-4">
+              <Avatar className="w-20 h-20">
+                <AvatarImage src={campaign.logo_url} alt={campaign.campaign_name} />
+                <AvatarFallback className="text-xl">
+                  {campaign.campaign_name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">
+                  {campaign.campaign_name}
+                </h1>
+                <div className="flex items-center space-x-4 mt-3">
+                  <Badge
+                    variant="secondary"
+                    className="text-base px-3 py-1 font-semibold"
+                  >
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Brand {campaign.brand_id}
+                  </Badge>
+                  {campaign.work_number && (
+                    <div className="flex items-center text-muted-foreground">
+                      <Phone className="w-4 h-4 mr-1" />
+                      {campaign.work_number}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Badge
+                variant={getStatusBadgeVariant(campaign.campaignStatus)}
+                className="text-sm px-3 py-1 font-medium"
+              >
+                {campaign.campaignStatus.toUpperCase()}
+              </Badge>
+              <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <MoreHorizontal className="h-4 w-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      openCreateModal();
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create New Campaign
+                  </DropdownMenuItem>
+
+                  {(campaign.campaignStatus?.toLowerCase() === "draft" ||
+                    campaign.campaignStatus?.toLowerCase() === "uat") && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        openEditModal();
+                      }}
+                    >
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Campaign
+                    </DropdownMenuItem>
+                  )}
+
+                  {campaign.campaignStatus?.toLowerCase() === "uat" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setIsPublishWarningOpen(true);
+                      }}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Publish to Production
+                    </DropdownMenuItem>
+                  )}
+
+                  {campaign.campaignStatus?.toLowerCase() === "prod" && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          openEditModal();
+                        }}
+                        className=""
+                      >
+                        <PowerOff className="mr-2 h-4 w-4" />
+                        Edit Campaign
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          handleToggleStatus();
+                        }}
+                        className="text-destructive"
+                      >
+                        <PowerOff className="mr-2 h-4 w-4" />
+                        Deactivate Campaign
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <Badge
-            variant={getStatusBadgeVariant(campaign.campaignStatus)}
-            className="text-sm px-3 py-1 font-medium"
-          >
-            {campaign.campaignStatus.toUpperCase()}
-          </Badge>
-          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <MoreHorizontal className="h-4 w-4" />
-                Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => {
-                  setIsDropdownOpen(false);
-                  openCreateModal();
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create New Campaign
-              </DropdownMenuItem>
 
-              {(campaign.campaignStatus?.toLowerCase() === "draft" ||
-                campaign.campaignStatus?.toLowerCase() === "uat") && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    openEditModal();
-                  }}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Campaign
-                </DropdownMenuItem>
-              )}
+          {/* Status Badge and Actions */}
 
-              {campaign.campaignStatus?.toLowerCase() === "uat" && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setIsDropdownOpen(false);
-                    setIsPublishWarningOpen(true);
-                  }}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Publish to Production
-                </DropdownMenuItem>
-              )}
+          {/* Campaign Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Nurses</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{nurses?.length || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Assigned team members
+                </p>
+              </CardContent>
+            </Card>
 
-              {campaign.campaignStatus?.toLowerCase() === "prod" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  URLs Generated
+                </CardTitle>
+                <Globe className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {(nurses?.length || 0) * 3}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Campaign URLs created
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            {campaign.campaignStatus?.toLowerCase() !== "draft" &&
+              campaign.campaignStatus?.toLowerCase() !== "uat" && (
                 <>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      openEditModal();
-                    }}
-                    className=""
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      navigate(
+                        `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
+                      )
+                    }
+                    className="gap-2"
                   >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Edit Campaign
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      handleToggleStatus();
-                    }}
-                    className="text-destructive"
-                  >
-                    <PowerOff className="mr-2 h-4 w-4" />
-                    Deactivate Campaign
-                  </DropdownMenuItem>
+                    <Link className="w-4 h-4" />
+                    View Campaign URLs
+                  </Button>
+                  <Button onClick={() => setShowForm(true)} className="gap-2">
+                    Generate URL
+                  </Button>
                 </>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+          </div>
+          {/* Campaign Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">{campaign.notes}</p>
+            </CardContent>
+          </Card>
 
-      {/* Status Badge and Actions */}
-
-      {/* Campaign Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Nurses</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{nurses?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Assigned team members
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              URLs Generated
-            </CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(nurses?.length || 0) * 3}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Campaign URLs created
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="flex items-center justify-end gap-3">
-        {campaign.campaignStatus?.toLowerCase() !== "draft" &&
-          campaign.campaignStatus?.toLowerCase() !== "uat" && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  navigate(
-                    `/generated-urls?campaignId=${campaign.campaign_id}&campaignName=${encodeURIComponent(campaign.campaign_name)}`,
-                  )
-                }
-                className="gap-2"
-              >
-                <Link className="w-4 h-4" />
-                View Campaign URLs
-              </Button>
-              <Button onClick={() => setIsUrlModalOpen(true)} className="gap-2">
-                <Link className="w-4 h-4" />
-                Generate URL
-              </Button>
-            </>
-          )}
-      </div>
-      {/* Campaign Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Campaign Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">{campaign.notes}</p>
-        </CardContent>
-      </Card>
-
-      {/* Assigned Nurses Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Assigned Nurses</CardTitle>
-          <CardDescription>Nurses assigned to this campaign</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {nursesError ? (
-            <div className="text-center py-4 text-red-500">
-              <span>Error loading nurses: {nursesError.message}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="ml-2"
-                onClick={() => refetchNurses()}
-              >
-                Retry
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nurse</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead>Action</TableHead> {/* New column */}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {nurses && nurses.length > 0 ? (
-                  nurses.map((nurse) => (
-                    <TableRow key={nurse.user_id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback>
-                              {nurse.first_name.charAt(0)}
-                              {nurse.last_name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">
+          {/* Assigned Nurses Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Nurses</CardTitle>
+              <CardDescription>Nurses assigned to this campaign</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {nursesError ? (
+                <div className="text-center py-4 text-red-500">
+                  <span>Error loading nurses: {nursesError.message}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() => refetchNurses()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nurse</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Action</TableHead> {/* New column */}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nurses && nurses.length > 0 ? (
+                      nurses.map((nurse) => (
+                        <TableRow key={nurse.user_id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="w-8 h-8">
+                                <AvatarFallback>
+                                  {nurse.first_name.charAt(0)}
+                                  {nurse.last_name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">
                 {nurse.first_name} {nurse.last_name}
               </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{nurse.email}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            nurse.userStatus === "active" ? "default" : "secondary"
-                          }
-                        >
-                          {nurse.userStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(nurse.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="destructive"
-                          className="cursor-pointer"
-                          onClick={() => handleRevokeNurse(nurse.user_id)}
-                        >
-                          Revoke
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
-                      No nurses assigned to this campaign
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{nurse.email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                nurse.userStatus === "active" ? "default" : "secondary"
+                              }
+                            >
+                              {nurse.userStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(nurse.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="destructive"
+                              className="cursor-pointer"
+                              onClick={() => handleRevokeNurse(nurse.user_id)}
+                            >
+                              Revoke
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                          No nurses assigned to this campaign
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
 
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Campaign Form Modal */}
-      <CampaignFormModal
-        status={campaign.campaignStatus}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setIsDropdownOpen(false);
-        }}
-        onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}
-        initialData={
-          isEditing && campaign ? formatCampaignForEdit(campaign) : null
-        }
-        isEditing={isEditing}
-      />
+          {/* Campaign Form Modal */}
+          <CampaignFormModal
+            status={campaign.campaignStatus}
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              setIsDropdownOpen(false);
+            }}
+            onSubmit={isEditing ? handleEditCampaign : handleCreateCampaign}
+            initialData={
+              isEditing && campaign ? formatCampaignForEdit(campaign) : null
+            }
+            isEditing={isEditing}
+          />
 
-      {/* Generate URL Modal */}
-      <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Generate Patient URL</DialogTitle>
-            <DialogDescription>
-              Create a unique URL and VCF card for a patient
-            </DialogDescription>
-            {patientUrl && (
-              <div className="mt-2 p-2 bg-green-100 text-green-800 rounded text-sm break-all">
-                URL:{" "}
-                <a
-                  href={patientUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  {patientUrl}
-                </a>
-              </div>
-            )}
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Campaign</Label>
-              <div className="p-3 bg-muted rounded-lg">
-                <div className="font-medium">{campaign.campaign_name}</div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Doctor's Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="name"
-                  placeholder="Dr. John Smith"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
-                  }
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="doctorPhone">Doctor's Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="phone_number"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                  value={formData.phone_number}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      phone_number: e.target.value,
-                    }))
-                  }
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                placeholder="Additional information about the doctor or clinic"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    email: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={resetUrlForm}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleGenerateUrl}
-              disabled={!formData.phone_number || !formData.name}
-              className="gap-2"
-            >
-              <Link className="w-4 h-4" />
-              Generate URL
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Publish Warning Alert Dialog */}
-      <AlertDialog
-        open={isPublishWarningOpen}
-        onOpenChange={setIsPublishWarningOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Publish Campaign</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to publish this campaign? After publishing,
-              you will not be able to modify the campaign information.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePublishCampaign}>
-              <Send className="w-4 h-4 mr-2" />
-              Publish Campaign
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+          {/* Publish Warning Alert Dialog */}
+          <AlertDialog
+            open={isPublishWarningOpen}
+            onOpenChange={setIsPublishWarningOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Publish Campaign</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to publish this campaign? After publishing,
+                  you will not be able to modify the campaign information.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handlePublishCampaign}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Publish Campaign
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </>}
+    </>
   );
 };
 
