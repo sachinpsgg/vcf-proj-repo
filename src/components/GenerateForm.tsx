@@ -34,7 +34,7 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
     phone_number: "",
     email: "",
   });
-  console.log(userRole)
+  console.log(campaign)
   const [fieldVisibility, setFieldVisibility] = useState({
     name: true,
     phone_number: true,
@@ -134,7 +134,11 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div
+            className={`grid gap-8 ${
+              userRole === "admin" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+            }`}
+          >
             <Card className="">
               <CardHeader className="bg-gradient-to-r from-medical-600 to-medical-700">
                 <CardTitle className="flex items-center space-x-2">
@@ -167,63 +171,65 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
 
               <CardContent className="p-6 space-y-6">
                 {/* Logo Upload */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label
-                      htmlFor="logo"
-                      className="text-medical-700 font-medium"
-                    >
-                      Logo Image
-                    </Label>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="show-logo"
-                        checked={fieldVisibility.logo}
-                        onCheckedChange={() => toggleFieldVisibility("logo")}
-                      />
+                {userRole==='admin' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
                       <Label
-                        htmlFor="show-logo"
-                        className="text-sm text-medical-600"
+                        htmlFor="logo"
+                        className="text-medical-700 font-medium"
                       >
-                        Show on card
+                        Logo Image
                       </Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="show-logo"
+                          checked={fieldVisibility.logo}
+                          onCheckedChange={() => toggleFieldVisibility("logo")}
+                        />
+                        <Label
+                          htmlFor="show-logo"
+                          className="text-sm text-medical-600"
+                        >
+                          Show on card
+                        </Label>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Input
+                        id="logo"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="border-medical-200 focus:border-medical-500 focus:ring-medical-500"
+                      />
+                      {logoImage && (
+                        <div className="flex items-center space-x-3 p-3 bg-medical-50 rounded-lg border border-medical-200">
+                          <img
+                            src={logoImage}
+                            alt="Logo preview"
+                            className="w-12 h-12 rounded-lg object-cover border border-medical-300"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-medical-700">
+                              Logo uploaded
+                            </p>
+                            <p className="text-xs text-medical-500">
+                              This will appear on your card
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setLogoImage(null)}
+                            className="text-medical-500 hover:text-medical-700"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <Input
-                      id="logo"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="border-medical-200 focus:border-medical-500 focus:ring-medical-500"
-                    />
-                    {logoImage && (
-                      <div className="flex items-center space-x-3 p-3 bg-medical-50 rounded-lg border border-medical-200">
-                        <img
-                          src={logoImage}
-                          alt="Logo preview"
-                          className="w-12 h-12 rounded-lg object-cover border border-medical-300"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-medical-700">
-                            Logo uploaded
-                          </p>
-                          <p className="text-xs text-medical-500">
-                            This will appear on your card
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setLogoImage(null)}
-                          className="text-medical-500 hover:text-medical-700"
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -387,14 +393,22 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
                   </CardHeader>
                   <CardContent className="p-6">
                     <Tabs defaultValue="android" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
+                      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-2 text-sm sm:text-base">
                         <TabsTrigger value="android">Android</TabsTrigger>
                         <TabsTrigger value="ios">iOS</TabsTrigger>
                       </TabsList>
 
                       <TabsContent value="android" className="mt-6">
 
-                        <div className="relative bg-white rounded-md overflow-hidden shadow-2xl w-[320px] h-[640px] mx-auto border border-gray-300">
+                        <div
+                          className="relative bg-white rounded-md overflow-hidden shadow-2xl mx-auto border border-gray-300"
+                          style={{
+                            width: "100%",
+                            maxWidth: "320px",
+                            height: "100%",
+                            maxHeight: "640px",
+                          }}
+                        >
                           <div className="bg-purple-600 text-white px-4 py-1 text-xs flex items-center justify-between">
                             <span className="font-medium">5:32</span>
                             <div className="flex items-center space-x-1">
@@ -446,7 +460,7 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
 
                             {fieldVisibility.name && (
                               <h2 className="relative z-10 text-2xl font-medium text-gray-900 tracking-wide">
-                                {formData.name || "Dr. kanishk"}
+                                {formData.name || "Dr. ******"}
                               </h2>
                             )}
                           </div>
@@ -460,7 +474,7 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
                                   <Phone className="h-5 w-5 text-gray-600" />
                                   <div>
                                     <div className="font-medium text-gray-900 text-base">
-                                      {formData.phone_number || "9813545226"}
+                                      {formData.phone_number || "**********"}
                                     </div>
                                     <div className="text-sm text-gray-500 uppercase tracking-wide">
                                       DOCTOR
@@ -489,7 +503,7 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
                               <div className="px-4 py-4 flex items-center border-b border-gray-100">
                                 <Mail className="h-5 w-5 text-gray-600 mr-4" />
                                 <div className="font-medium text-gray-900">
-                                  {formData.email || "k@psgg.com"}
+                                  {formData.email || "*********"}
                                 </div>
                               </div>
                             )}
@@ -507,7 +521,7 @@ export const GenerateForm: React.FC<GenerateFormProps> = ({
                                   </svg>
                                 </div>
                                 <div className="font-medium text-gray-900">
-                                  test22.com
+                                  {campaign?.campaign_name}
                                 </div>
                               </div>
                             )}

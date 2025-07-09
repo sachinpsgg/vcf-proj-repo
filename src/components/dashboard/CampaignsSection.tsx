@@ -340,8 +340,8 @@ const CampaignsSection = ({
 
       {/* Campaigns Table */}
       <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
-          <div className="">
+        <CardHeader className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
             <CardTitle>
               {brandFilter === "all" && statusFilter === "all"
                 ? "All Campaigns"
@@ -351,17 +351,18 @@ const CampaignsSection = ({
               {brandFilter === "all" && statusFilter === "all"
                 ? "View and manage all campaigns, their status, and nurse assignments"
                 : `Showing ${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}
-                 ${brandFilter !== "all" ? `for ${brandFilter}` : ""}
-                 ${statusFilter !== "all" ? `with status: ${statusFilter.toUpperCase()}` : ""}`}
+             ${brandFilter !== "all" ? `for ${brandFilter}` : ""}
+             ${statusFilter !== "all" ? `with status: ${statusFilter.toUpperCase()}` : ""}`}
             </CardDescription>
           </div>
-          <div className="flex items-center justify-end gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-muted-foreground">
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                 Filter by Brand:
               </label>
               <Select value={brandFilter} onValueChange={setBrandFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Select brand" />
                 </SelectTrigger>
                 <SelectContent>
@@ -375,12 +376,12 @@ const CampaignsSection = ({
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                 Filter by Status:
               </label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -408,114 +409,116 @@ const CampaignsSection = ({
             )}
           </div>
         </CardHeader>
+
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Total vcf</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Total Nurses</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-center">Edit</TableHead>
-                <TableHead className="text-center">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[800px]">
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No campaigns found
-                  </TableCell>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Total vcf</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Total Nurses</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-center">Edit</TableHead>
+                  <TableHead className="text-center">Details</TableHead>
                 </TableRow>
-              ) : (
-                campaigns.map((campaign) => (
-                  <TableRow key={campaign.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage
-                            src={campaign.logo}
-                            alt={campaign.name}
-                          />
-                          <AvatarFallback>
-                            {campaign.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{campaign.name}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[200px]">
-                            {campaign.notes}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {campaign.brandName}
-                    </TableCell>
-                    <TableCell className="font-medium justify-center text-center">
-                      232
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(campaign.status)}>
-                        {campaign.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {campaign.phoneNumber}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1 text-center">
-                        {campaign.assignedNurses.length}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {campaign.createdAt.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditModal(campaign)}
-                        disabled={campaign.status === "Prod"}
-                        className="h-8 w-8 p-0"
-                        title={
-                          campaign.status === "Prod"
-                            ? "Cannot edit production campaigns"
-                            : "Edit campaign"
-                        }
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          onNavigateToDetail?.(`campaign-${campaign.id}`)
-                        }
-                        className="h-8 w-8 p-0"
-                        title="View campaign details"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+              </TableHeader>
+
+              <TableBody>
+                {campaigns.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={9}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      No campaigns found
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={campaign.logo} alt={campaign.name} />
+                            <AvatarFallback>
+                              {campaign.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{campaign.name}</div>
+                            <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                              {campaign.notes}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {campaign.brandName}
+                      </TableCell>
+                      <TableCell className="font-medium text-center">
+                        232
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(campaign.status)}>
+                          {campaign.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {campaign.phoneNumber}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-center">
+                          {campaign.assignedNurses.length}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {campaign.createdAt.toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditModal(campaign)}
+                          disabled={campaign.status === "Prod"}
+                          className="h-8 w-8 p-0"
+                          title={
+                            campaign.status === "Prod"
+                              ? "Cannot edit production campaigns"
+                              : "Edit campaign"
+                          }
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            onNavigateToDetail?.(`campaign-${campaign.id}`)
+                          }
+                          className="h-8 w-8 p-0"
+                          title="View campaign details"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
 
       {/* Campaign Form Modal */}
       <CampaignFormModal

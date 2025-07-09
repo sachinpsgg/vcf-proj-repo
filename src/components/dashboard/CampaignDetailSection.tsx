@@ -819,7 +819,8 @@ END:VCARD`;
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </>}
+      </>
+      }
     </>
   );
 };

@@ -163,6 +163,10 @@ const DashboardLayout = ({
   });
 
   useEffect(() => {
+    const storedAuth = localStorage.getItem("user");
+    if (storedAuth) {
+      navigate("/dashboard"); // ✅ change the route to your dashboard path
+    }
     const fetchCampaigns = async () => {
       try {
         const storedAuth = localStorage.getItem("user");

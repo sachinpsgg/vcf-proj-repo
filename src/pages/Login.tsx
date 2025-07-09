@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,12 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const storedAuth = localStorage.getItem("user");
+    if (storedAuth) {
+      navigate("/dashboard"); // ✅ change the route to your dashboard path
+    }
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
